@@ -25,10 +25,11 @@ TILE_COLORS = {
 }
 
 # Define constants
-COLUMNS = 10 #number of columns of tilemaps to make big map
-NUM_MAPS = 100 #total number of maps
+COLUMNS = 20 #number of columns of tilemaps to make big map
+NUM_MAPS = 300 #total number of maps
 
 TILE_SIZE = 32
+SMALL_TILE_SIZE = 2
 TILEMAP_WIDTH = 40
 TILEMAP_HEIGHT = 32
 
@@ -162,7 +163,7 @@ def render_tilemap(tilemap, bigMap, id):
     if not bigMap:
         TILE_SIZE = 32
     elif bigMap:
-        TILE_SIZE = 4
+        TILE_SIZE = SMALL_TILE_SIZE
     # Use a background color to clear the screen
     background_color = (0, 0, 0)  # Black background
 
@@ -208,10 +209,10 @@ def render_tilemap(tilemap, bigMap, id):
             tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
             
             if idx == id:
-                index_text = my_font.render(str(idx), True, (255, 0, 0))
+                index_text = small_my_font.render(str(idx), True, (255, 0, 0))
                 pygame.draw.rect(screen, (255, 0, 0), tile_rect, 2)  # Draw rectangle around the tilemap
             else:
-                index_text = my_font.render(str(idx), True, (255, 255, 255))
+                index_text = small_my_font.render(str(idx), True, (255, 255, 255))
                 pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
@@ -320,7 +321,7 @@ def readFile(id):
 pygame.init()
 pygame.font.init()
 my_font = pygame.font.SysFont('Arial', 20)
-
+small_my_font = pygame.font.SysFont('Arial', 10)
 data, details = readFile(0)
 statusString = f"loaded map: level{id}.h"
 yTiles = int(details[1])
