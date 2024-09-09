@@ -4,21 +4,26 @@ import os
 import glob
 import time
 
-GRASS = 2
-SAND = 1
+#tile types
 WATER = 0
+SAND = 1
+GRASS = 2
+STONE = 3
+
+maxTiles = 3 #should equal the index of the last tile
+
 
 tileSize = 32
 cursorState = 0
-id = 1
+id = 0
 statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 
 def concat_and_pack():
-    filenames = glob.glob('./*h')
+    filenames = glob.glob('levels/*h')
     #filenames = fileList
-    with open('./levels.h', 'w') as outfile:
+    with open('levels.h', 'w') as outfile:
         for fname in filenames:
             with open(fname) as infile:
                 for line in infile:
@@ -66,9 +71,10 @@ def create_zip_with_headers(zip_filename, directory):
 
 
 def writeToFile(id):
-    levelname = "./level" + str(id) + ".h"
+    id = str(id).zfill(3)
+    levelname = "levels/level" + str(id) + ".h"
     f = open(levelname, 'w')
-    outputString = "int lvl" + str(id) + "[" + str(int(yTiles)) + "][" + str(int(xTiles)) + "] =\n{\n"
+    outputString = "int lvl0" + str(id) + "[" + str(int(yTiles)) + "][" + str(int(xTiles)) + "] =\n{\n"
     
     for rowIndex, row in enumerate(data):
         outputString += "    { "
@@ -94,8 +100,8 @@ def writeToFile(id):
 def readFile(id):
     
     newLevel = False
-    levelname = str("level" + str(id) + ".h")
-    print("zip functionality disabled")
+    id2 = str(id).zfill(3)
+    levelname = str("levels/level" + str(id2) + ".h")
     #print("extracting " + levelname)
     try:
         #extract_files("levels.zip",levelname,"./")
@@ -105,7 +111,7 @@ def readFile(id):
         #extract_files("levels.zip",'level0.h',"./")
         statusString = str(levelname) + " not found, blank template loaded"
         print(str(levelname) + " not found, blank template loaded")
-        f = open("level0.h", 'r')
+        f = open("levels/level000.h", 'r')
         newLevel = True
     y = 0
 
@@ -116,8 +122,11 @@ def readFile(id):
         if newLevel == True:
             id = 0
             newLevel = False
-        levelName = "lvl" + str(id)
+        id2 = str(id).zfill(4)
+        print(id2)
+        levelName = "lvl" + str(id2)
         if levelName in line:
+            print("found level details")
             details = line.split(' ')[1].replace(']', '').split('[')
             arr = [[0 for _ in range(int(details[2]) )] for _ in range(int(details[1]))]
         elif "{" in line and ',' in line:
@@ -133,7 +142,7 @@ def readFile(id):
     return arr, details
 
 
-data = readFile(1)
+data = readFile(0)
 statusTimeout = 0
 statusString = "loaded map: level" + str(id) + ".h"
 yTiles = int(data[1][1])
@@ -142,8 +151,8 @@ xTiles = int(data[1][2])
 yDim = (yTiles ) * tileSize
 xDim = (xTiles ) * tileSize
 #print(xDim)
-screenyDim = (yTiles - 2) * tileSize
-screenxDim = (xTiles - 2) * tileSize
+screenyDim = (yTiles) * tileSize
+screenxDim = (xTiles) * tileSize
 data = data[0]
 mouse1Held = False
 screen = pygame.display.set_mode((screenxDim,screenyDim))
@@ -173,8 +182,24 @@ while running:
                 writeToFile(id)
                 statusString = "saved map: level" + str(id) + ".h, exiting editor"
                 running = False
+            if event.scancode == 63:
+                statusTimeout = 0
+                statusString = "zoom out"
+                bigMap = True
+            if event.scancode == 64:
+                statusTimeout = 0
+                statusString = "zoom in"
+                
             if event.scancode == 62:
 #                print("zip functionality disabled")
+                try:
+                    os.remove('./levels.h')
+                    statusTimeout = 0
+                    statusString = "removed old levels.h"
+                    time.sleep(1) #give it a chance to clean up file                    
+                except:
+                    statusTimeout = 0
+                    statusString = "unable to remove old levels.h?"
                 statusTimeout = 0
                 statusString = "packed all levels"
                 concat_and_pack()
@@ -193,7 +218,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                statusString = "saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h"
+                statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
                 writeToFile(id)
 
             if event.scancode == 59:
@@ -201,12 +226,12 @@ while running:
                 writeToFile(id)
                 #remove_all_h_files("./")
                 id = id - 1
-                if id < 1:
-                    id = 1
+                if id < 0:
+                    id = 0
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                statusString = "saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h"
+                statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
                 
         text_surface = my_font.render("map: " + str(id), False, (0, 0, 0))
         text_surface2 = my_font.render("F2/F3 select map | F4 save current map | F5 pack all maps into levels.h", False, (0, 0, 0))
@@ -236,12 +261,12 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 4:
                 cursorState = cursorState + 1
-                if cursorState > 2:
+                if cursorState > maxTiles:
                     cursorState = 0
             if event.button == 5:
                 cursorState = cursorState - 1
                 if cursorState < 0:
-                    cursorState = 2
+                    cursorState = maxTiles
             #print(event.button)
             if event.button == 1:
                 mousePosition = pygame.mouse.get_pos()
@@ -271,6 +296,8 @@ while running:
                 pygame.draw.rect(screen,"chartreuse4",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
             elif item == SAND:
                 pygame.draw.rect(screen,"burlywood3",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
+            elif item == STONE:
+                pygame.draw.rect(screen,"darkgrey",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
             else:
                 pygame.draw.rect(screen,"white",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
             x = x + 1
@@ -278,15 +305,15 @@ while running:
         screen.blit(text_surface, (0,0))
         screen.blit(text_surface2, (150,0))
         screen.blit(statusText, (150,screenyDim-50))
+        pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
         if cursorState == WATER:
-            pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
             pygame.draw.circle(screen, "cornflowerblue", pygame.mouse.get_pos(), 4)
         if cursorState == GRASS:
-            pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
             pygame.draw.circle(screen, "chartreuse4", pygame.mouse.get_pos(), 4)
         if cursorState == SAND:
-            pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
             pygame.draw.circle(screen, "burlywood3", pygame.mouse.get_pos(), 4)
+        if cursorState == STONE:
+            pygame.draw.circle(screen, "darkgrey", pygame.mouse.get_pos(), 4)
        # if cursorState == 3:
        #     pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
        #     pygame.draw.circle(screen, "white", pygame.mouse.get_pos(), 4)
