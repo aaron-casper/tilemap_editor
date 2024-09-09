@@ -94,14 +94,16 @@ def generate_large_tilemap(small_tilemaps):
 # Function to render the tilemap using Pygame
 def render_tilemap(tilemap):
     pygame.init()
+    pygame.font.init()
+    my_font = pygame.font.SysFont('Arial', 24)
     screen_width, screen_height = tilemap.shape[1] * TILE_SIZE, tilemap.shape[0] * TILE_SIZE
     screen = pygame.display.set_mode((screen_width, screen_height))
-
+    
     # Predefine rects with colors
     tile_rects = {}
     for tile_id, color in TILE_COLORS.items():
         tile_surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
-        tile_surface.fill(color)
+        tile_surface.fill(color)           
         tile_rects[tile_id] = tile_surface
 
     running = True
@@ -109,14 +111,14 @@ def render_tilemap(tilemap):
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
-
+        
         # Draw the tilemap
         for y in range(tilemap.shape[0]):
             for x in range(tilemap.shape[1]):
                 tile_id = tilemap[y, x]
                 if tile_id in tile_rects:
                     screen.blit(tile_rects[tile_id], (x * TILE_SIZE, y * TILE_SIZE))
-
+                    
         pygame.display.flip()
 
     pygame.quit()

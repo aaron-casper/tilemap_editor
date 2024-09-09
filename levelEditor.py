@@ -122,7 +122,9 @@ def readFile(id):
         if newLevel == True:
             id = 0
             newLevel = False
-        levelName = "lvl" + str(id)
+        id2 = str(id).zfill(4)
+        print(id2)
+        levelName = "lvl" + str(id2)
         if levelName in line:
             print("found level details")
             details = line.split(' ')[1].replace(']', '').split('[')
@@ -149,8 +151,8 @@ xTiles = int(data[1][2])
 yDim = (yTiles ) * tileSize
 xDim = (xTiles ) * tileSize
 #print(xDim)
-screenyDim = (yTiles - 2) * tileSize
-screenxDim = (xTiles - 2) * tileSize
+screenyDim = (yTiles) * tileSize
+screenxDim = (xTiles) * tileSize
 data = data[0]
 mouse1Held = False
 screen = pygame.display.set_mode((screenxDim,screenyDim))
