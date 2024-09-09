@@ -4,9 +4,14 @@ import os
 import glob
 import time
 
-GRASS = 2
-SAND = 1
+#tile types
 WATER = 0
+SAND = 1
+GRASS = 2
+STONE = 3
+
+maxTiles = 3 #should equal the index of the last tile
+
 
 tileSize = 32
 cursorState = 0
@@ -133,7 +138,7 @@ def readFile(id):
     return arr, details
 
 
-data = readFile(1)
+data = readFile(0)
 statusTimeout = 0
 statusString = "loaded map: level" + str(id) + ".h"
 yTiles = int(data[1][1])
@@ -173,6 +178,14 @@ while running:
                 writeToFile(id)
                 statusString = "saved map: level" + str(id) + ".h, exiting editor"
                 running = False
+            if event.scancode == 63:
+                statusTimeout = 0
+                statusString = "zoom out"
+                bigMap = True
+            if event.scancode == 64:
+                statusTimeout = 0
+                statusString = "zoom in"
+                
             if event.scancode == 62:
 #                print("zip functionality disabled")
                 statusTimeout = 0
@@ -193,7 +206,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                statusString = "saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h"
+                statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
                 writeToFile(id)
 
             if event.scancode == 59:
@@ -201,12 +214,12 @@ while running:
                 writeToFile(id)
                 #remove_all_h_files("./")
                 id = id - 1
-                if id < 1:
-                    id = 1
+                if id < 0:
+                    id = 0
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                statusString = "saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h"
+                statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
                 
         text_surface = my_font.render("map: " + str(id), False, (0, 0, 0))
         text_surface2 = my_font.render("F2/F3 select map | F4 save current map | F5 pack all maps into levels.h", False, (0, 0, 0))
@@ -236,12 +249,12 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 4:
                 cursorState = cursorState + 1
-                if cursorState > 2:
+                if cursorState > maxTiles:
                     cursorState = 0
             if event.button == 5:
                 cursorState = cursorState - 1
                 if cursorState < 0:
-                    cursorState = 2
+                    cursorState = maxTiles
             #print(event.button)
             if event.button == 1:
                 mousePosition = pygame.mouse.get_pos()
@@ -271,6 +284,8 @@ while running:
                 pygame.draw.rect(screen,"chartreuse4",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
             elif item == SAND:
                 pygame.draw.rect(screen,"burlywood3",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
+            elif item == STONE:
+                pygame.draw.rect(screen,"darkgrey",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
             else:
                 pygame.draw.rect(screen,"white",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
             x = x + 1
@@ -278,15 +293,15 @@ while running:
         screen.blit(text_surface, (0,0))
         screen.blit(text_surface2, (150,0))
         screen.blit(statusText, (150,screenyDim-50))
+        pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
         if cursorState == WATER:
-            pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
             pygame.draw.circle(screen, "cornflowerblue", pygame.mouse.get_pos(), 4)
         if cursorState == GRASS:
-            pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
             pygame.draw.circle(screen, "chartreuse4", pygame.mouse.get_pos(), 4)
         if cursorState == SAND:
-            pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
             pygame.draw.circle(screen, "burlywood3", pygame.mouse.get_pos(), 4)
+        if cursorState == STONE:
+            pygame.draw.circle(screen, "darkgrey", pygame.mouse.get_pos(), 4)
        # if cursorState == 3:
        #     pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
        #     pygame.draw.circle(screen, "white", pygame.mouse.get_pos(), 4)
