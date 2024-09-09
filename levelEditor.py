@@ -111,6 +111,8 @@ def render_tilemap(tilemap, bigMap, id):
                 tilePos = (x * TILE_SIZE, y * TILE_SIZE)
                 color = TILE_COLORS.get(item, (255, 255, 255))  # Default to white if item is unknown
                 pygame.draw.rect(screen, color, pygame.Rect(tilePos[0], tilePos[1], TILE_SIZE, TILE_SIZE))
+                pygame.draw.rect(screen, (128, 128, 128), pygame.Rect(tilePos[0], tilePos[1], TILE_SIZE, TILE_SIZE),1)
+
 
         # Display status texts
         text_surface = my_font.render("map: " + str(id), False, (255,255,255))
@@ -144,7 +146,7 @@ def render_tilemap(tilemap, bigMap, id):
                 pygame.draw.rect(screen, (255, 0, 0), tile_rect, 2)  # Draw rectangle around the tilemap
             else:
                 index_text = my_font.render(str(idx), True, (255, 255, 255))
-                pygame.draw.rect(screen, (128, 128, 128), tile_rect, 2)  # Draw rectangle around the tilemap
+                pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
         text_surface = my_font.render("map: " + str(id), False, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", False, (255,255,255))
