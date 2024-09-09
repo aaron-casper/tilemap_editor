@@ -140,6 +140,7 @@ def render_tilemap(tilemap, small_tilemaps):
     pygame.quit()
 
 def reload_map():
+        tilemaps = parse_tilemap_data('levels.h')
         small_tilemaps = create_small_tilemaps(tilemaps)
 
         # Generate a large tilemap
