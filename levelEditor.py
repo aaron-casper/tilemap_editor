@@ -13,7 +13,7 @@ STONE = 3
 maxTiles = 3 #should equal the index of the last tile
 
 
-tileSize = 4
+tileSize = 32
 cursorState = 0
 id = 0
 statusString = "test"
