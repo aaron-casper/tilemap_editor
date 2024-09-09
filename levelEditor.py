@@ -115,8 +115,8 @@ def render_tilemap(tilemap, bigMap, id):
         # Display status texts
         text_surface = my_font.render("map: " + str(id), False, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", False, (255,255,255))
-        screen.blit(text_surface, (0, 0))
-        screen.blit(text_surface2, (150, 0))
+        screen.blit(text_surface, (0, screenyDim - 50))
+        screen.blit(text_surface2, (150, screenyDim - 50))
 
         pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), 6)
         cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
@@ -138,16 +138,18 @@ def render_tilemap(tilemap, bigMap, id):
             row = idx // num_columns
             col = idx % num_columns
             tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
-            pygame.draw.rect(screen, (128, 128, 128), tile_rect, 2)  # Draw rectangle around the tilemap
+            
             if idx == id:
                 index_text = my_font.render(str(idx), True, (255, 0, 0))
+                pygame.draw.rect(screen, (255, 0, 0), tile_rect, 2)  # Draw rectangle around the tilemap
             else:
                 index_text = my_font.render(str(idx), True, (255, 255, 255))
+                pygame.draw.rect(screen, (128, 128, 128), tile_rect, 2)  # Draw rectangle around the tilemap
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
         text_surface = my_font.render("map: " + str(id), False, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", False, (255,255,255))
-        screen.blit(text_surface, (0, 0))
-        screen.blit(text_surface2, (150, 0))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", False, (255,255,255))
+        screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
+        screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
     pygame.display.flip()
 
 def render_map(bigMap,id):
