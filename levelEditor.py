@@ -209,7 +209,7 @@ while running:
                 statusString = "saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h"
                 
         text_surface = my_font.render("map: " + str(id), False, (0, 0, 0))
-        text_surface2 = my_font.render("F2/F3 select map | F4 save current map | MouseWheel selects tile type", False, (0, 0, 0))
+        text_surface2 = my_font.render("F2/F3 select map | F4 save current map | F5 pack all maps into levels.h", False, (0, 0, 0))
         statusText = my_font.render(statusString, False, (0, 0, 0))
        
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
