@@ -6,7 +6,7 @@ import glob
 import time
 import re
 import numpy as np
-
+import random
 # Tile types
 WATER = 0
 SAND = 1
@@ -23,6 +23,9 @@ TILE_COLORS = {
 }
 
 # Define constants
+COLUMNS = 5 #number of columns of tilemaps to make big map
+NUM_MAPS = 25 #total number of maps
+
 TILE_SIZE = 32
 TILEMAP_WIDTH = 40
 TILEMAP_HEIGHT = 32
@@ -34,6 +37,29 @@ statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 id = 0
+def create_random_map(width, height):
+    """Generate a random tilemap with given dimensions."""
+    return np.random.randint(low=0, high=1 + 1, size=(height, width), dtype=np.int32)
+
+def save_map_to_file(map_data, file_name, id):
+    """Save the map data to a file."""
+    with open(file_name, 'w') as f:
+        height, width = map_data.shape
+        id2 = str(id).zfill(3)
+        outputString = f"int lvl0{id2}[{yTiles}][{xTiles}] =\n{{\n"
+        f.write(outputString)
+        for row in map_data:
+            row_str = ','.join(map(str, row.flatten()))
+            f.write(f'    {{{ row_str }}},\n')
+        f.write('};\n')
+
+def generate_and_save_maps(num_maps):
+    """Generate and save a number of random maps."""
+    for i in range(num_maps):
+        id = i
+        map_data = create_random_map(TILEMAP_WIDTH, TILEMAP_HEIGHT)
+        save_map_to_file(map_data, f'levels/level{i:03d}.h', id)
+
 
 def parse_tilemap_data(filename):
     with open(filename, 'r') as file:
@@ -82,7 +108,7 @@ def create_small_tilemaps(tilemaps):
 
 def generate_large_tilemap(small_tilemaps):
     num_tiles = len(small_tilemaps)
-    num_columns = 10
+    num_columns = COLUMNS
     num_rows = (num_tiles + num_columns - 1) // num_columns
 
     large_tilemap = np.zeros((num_rows * TILEMAP_HEIGHT, num_columns * TILEMAP_WIDTH), dtype=np.int32)
@@ -98,7 +124,7 @@ def render_tilemap(tilemap, bigMap, id):
     if not bigMap:
         TILE_SIZE = 32
     elif bigMap:
-        TILE_SIZE = 4
+        TILE_SIZE = 2
     # Use a background color to clear the screen
     background_color = (0, 0, 0)  # Black background
 
@@ -135,7 +161,7 @@ def render_tilemap(tilemap, bigMap, id):
         tilemaps = parse_tilemap_data('levels.h')
         small_tilemaps = create_small_tilemaps(tilemaps)
         num_tiles = len(small_tilemaps)
-        num_columns = 10
+        num_columns = COLUMNS
         for idx in range(num_tiles):
             row = idx // num_columns
             col = idx % num_columns
@@ -218,6 +244,7 @@ def writeToFile(id):
 def readFile(id):
     id2 = str(id).zfill(3)
     levelname = f"levels/level{id2}.h"
+    global newLevel
     newLevel = False
     try:
         f = open(levelname, 'r')
@@ -231,7 +258,7 @@ def readFile(id):
     for line in f:
         if newLevel:
             id = 0
-            newLevel = False
+            #newLevel = False
         id2 = str(id).zfill(4)
         levelName = f"lvl{id2}"
         if levelName in line:
@@ -267,7 +294,6 @@ pygame.mouse.set_visible(False)
 running = True
 mouse1Held = False
 while running:
-    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -315,6 +341,9 @@ while running:
                 statusTimeout = 0
                 statusString = "saved map: level" + str(id) + ".h"
                 writeToFile(id)
+            if event.scancode == 69:
+                print("generating tiles")
+                generate_and_save_maps(NUM_MAPS)
             if event.scancode == 60:
                 #print("next map")
                 writeToFile(id)
@@ -325,7 +354,10 @@ while running:
                 statusTimeout = 0
                 statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
                 writeToFile(id)
-
+                print(newLevel)
+                if newLevel == True:
+                    concat_and_pack()
+                    newLevel = False
             if event.scancode == 59:
                 #print("prev map")
                 writeToFile(id)
