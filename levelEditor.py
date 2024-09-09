@@ -1,37 +1,174 @@
 import pygame
+from pygame.locals import *
 import zipfile
 import os
 import glob
 import time
+import re
+import numpy as np
 
-#tile types
+# Tile types
 WATER = 0
 SAND = 1
 GRASS = 2
 STONE = 3
 
-maxTiles = 3 #should equal the index of the last tile
+# Define colors for each tile ID
+TILE_COLORS = {
+    WATER: (0, 0, 128),
+    SAND: (96, 64, 0),
+    GRASS: (0, 128, 0),
+    STONE: (96, 96, 96),
+    # Add more colors as needed
+}
 
+# Define constants
+TILE_SIZE = 32
+TILEMAP_WIDTH = 40
+TILEMAP_HEIGHT = 32
 
-tileSize = 32
+# Global Variables
+bigMap = False
 cursorState = 0
-id = 0
 statusString = "test"
 statusTimeout = 0
 statusLimit = 100
+id = 0
+
+def parse_tilemap_data(filename):
+    with open(filename, 'r') as file:
+        content = file.read()
+
+    # Refined regular expression to match the tilemap data
+    tilemap_pattern = re.compile(
+        r'int\s+(\w+)\s*\[\s*(\d+)\s*\]\s*\[\s*(\d+)\s*\]\s*=\s*\{(.*?)\};',
+        re.DOTALL
+    )
+    tilemaps = {}
+
+    for match in tilemap_pattern.finditer(content):
+        name = match.group(1)
+        height = int(match.group(2))
+        width = int(match.group(3))
+        data = match.group(4).replace('\n', '').replace(' ', '')
+
+        # Clean the data
+        data = data.strip('{}').replace('},{', ' ').replace(',', ' ')
+
+        # Convert the cleaned data into a numpy array
+        try:
+            expected_size = height * width
+            data_array = np.fromstring(data, dtype=np.int32, sep=' ')
+            if data_array.size != expected_size:
+                #print(f"Data size mismatch: expected {expected_size}, got {data_array.size}")
+                continue
+            
+            tiles = data_array.reshape((height, width))
+            tilemaps[name] = tiles
+        except ValueError as e:
+            print(f"Error parsing tilemap {name}: {e}")
+
+    return tilemaps
+
+def create_small_tilemaps(tilemaps):
+    small_tilemaps = []
+    for name, tilemap in tilemaps.items():
+        height, width = tilemap.shape
+        for y in range(0, height, TILEMAP_HEIGHT):
+            for x in range(0, width, TILEMAP_WIDTH):
+                small_tilemap = tilemap[y:y+TILEMAP_HEIGHT, x:x+TILEMAP_WIDTH]
+                small_tilemaps.append(small_tilemap)
+    return small_tilemaps
+
+def generate_large_tilemap(small_tilemaps):
+    num_tiles = len(small_tilemaps)
+    num_columns = 10
+    num_rows = (num_tiles + num_columns - 1) // num_columns
+
+    large_tilemap = np.zeros((num_rows * TILEMAP_HEIGHT, num_columns * TILEMAP_WIDTH), dtype=np.int32)
+
+    for idx, small_tilemap in enumerate(small_tilemaps):
+        row = idx // num_columns
+        col = idx % num_columns
+        large_tilemap[row*TILEMAP_HEIGHT:(row+1)*TILEMAP_HEIGHT, col*TILEMAP_WIDTH:(col+1)*TILEMAP_WIDTH] = small_tilemap
+
+    return large_tilemap
+
+def render_tilemap(tilemap, bigMap, id):
+    if not bigMap:
+        TILE_SIZE = 32
+    elif bigMap:
+        TILE_SIZE = 4
+    # Use a background color to clear the screen
+    background_color = (0, 0, 0)  # Black background
+
+    if not bigMap:
+        # Small map rendering
+        screen.fill(background_color)  # Clear the screen
+
+        for y, row in enumerate(data):
+            for x, item in enumerate(row):
+                tilePos = (x * TILE_SIZE, y * TILE_SIZE)
+                color = TILE_COLORS.get(item, (255, 255, 255))  # Default to white if item is unknown
+                pygame.draw.rect(screen, color, pygame.Rect(tilePos[0], tilePos[1], TILE_SIZE, TILE_SIZE))
+                pygame.draw.rect(screen, (128, 128, 128), pygame.Rect(tilePos[0], tilePos[1], TILE_SIZE, TILE_SIZE),1)
+
+
+        # Display status texts
+        text_surface = my_font.render("map: " + str(id), False, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", False, (255,255,255))
+        screen.blit(text_surface, (0, screenyDim - 50))
+        screen.blit(text_surface2, (150, screenyDim - 50))
+
+        pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), 6)
+        cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
+        pygame.draw.circle(screen, cursor_color, pygame.mouse.get_pos(), 4)
+
+    else:
+        # Large map rendering
+        screen.fill(background_color)  # Clear the screen
+        for y in range(tilemap.shape[0]):
+            for x in range(tilemap.shape[1]):
+                tile_id = tilemap[y, x]
+                color = TILE_COLORS.get(tile_id, (255, 255, 255))  # Default to white if tile_id is unknown
+                pygame.draw.rect(screen, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+        tilemaps = parse_tilemap_data('levels.h')
+        small_tilemaps = create_small_tilemaps(tilemaps)
+        num_tiles = len(small_tilemaps)
+        num_columns = 10
+        for idx in range(num_tiles):
+            row = idx // num_columns
+            col = idx % num_columns
+            tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
+            
+            if idx == id:
+                index_text = my_font.render(str(idx), True, (255, 0, 0))
+                pygame.draw.rect(screen, (255, 0, 0), tile_rect, 2)  # Draw rectangle around the tilemap
+            else:
+                index_text = my_font.render(str(idx), True, (255, 255, 255))
+                pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
+            screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
+        text_surface = my_font.render("map: " + str(id), False, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", False, (255,255,255))
+        screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
+        screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
+    pygame.display.flip()
+
+def render_map(bigMap,id):
+    tilemaps = parse_tilemap_data('levels.h')
+    small_tilemaps = create_small_tilemaps(tilemaps)
+    large_tilemap = generate_large_tilemap(small_tilemaps)
+    render_tilemap(large_tilemap, bigMap, id)
 
 def concat_and_pack():
-    filenames = glob.glob('levels/*h')
-    #filenames = fileList
+    filenames = glob.glob('levels/*.h')
     with open('levels.h', 'w') as outfile:
         for fname in filenames:
             with open(fname) as infile:
-                for line in infile:
-                    outfile.write(line)
+                outfile.write(infile.read())
                 outfile.write('\n')
 
 def remove_all_h_files(directory):
-    # Use glob to find all .h files recursively
     pattern = os.path.join(directory, '**', '*.h')
     for file_path in glob.iglob(pattern, recursive=True):
         try:
@@ -41,11 +178,8 @@ def remove_all_h_files(directory):
             print(f"Error deleting {file_path}: {e}")
 
 def extract_files(zip_filename, files_to_extract, output_dir):
-    # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
-    
     with zipfile.ZipFile(zip_filename, 'r') as zipf:
-        # Ensure files_to_extract is a list
         if isinstance(files_to_extract, str):
             files_to_extract = [files_to_extract]
         
@@ -59,137 +193,108 @@ def extract_files(zip_filename, files_to_extract, output_dir):
 
 def create_zip_with_headers(zip_filename, directory):
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
-        # Walk through the directory
         for root, _, files in os.walk(directory):
             for file in files:
                 if file.endswith('.h'):
                     file_path = os.path.join(root, file)
-                    # Add file to zip, store with its relative path
                     arcname = os.path.relpath(file_path, directory)
                     zipf.write(file_path, arcname=arcname)
     print(f"Created ZIP archive: {zip_filename}")
 
-
 def writeToFile(id):
     id = str(id).zfill(3)
-    levelname = "levels/level" + str(id) + ".h"
-    f = open(levelname, 'w')
-    outputString = "int lvl0" + str(id) + "[" + str(int(yTiles)) + "][" + str(int(xTiles)) + "] =\n{\n"
-    
-    for rowIndex, row in enumerate(data):
-        outputString += "    { "
-        for colIndex, element in enumerate(row):
-            outputString += str(element)
-            if colIndex < len(row) - 1:
-                outputString += ","
-        if rowIndex == len(data) - 1:
-            outputString += "," + str(element)
-        outputString += " }"
-        if rowIndex < len(data) - 1:
-            outputString += ",\n"
-        else:
-            outputString += "\n"
-    
-    outputString += "};"
-    f.write(outputString)
-    #print(outputString)
-    #create_zip_with_headers("./levels.zip","./")
-    f.close()
-    
+    levelname = "levels/level" + id + ".h"
+    with open(levelname, 'w') as f:
+        outputString = f"int lvl0{id}[{yTiles}][{xTiles}] =\n{{\n"
+        for rowIndex, row in enumerate(data):
+            outputString += "    { "
+            outputString += ','.join(str(element) for element in row)
+            outputString += " }"
+            outputString += "," if rowIndex < len(data) else "\n"
+            outputString += '\n'
+        outputString += "};"
+        f.write(outputString)
 
 def readFile(id):
-    
-    newLevel = False
     id2 = str(id).zfill(3)
-    levelname = str("levels/level" + str(id2) + ".h")
-    #print("extracting " + levelname)
+    levelname = f"levels/level{id2}.h"
+    newLevel = False
     try:
-        #extract_files("levels.zip",levelname,"./")
-        #extract_files("levels.zip",'level0.h',"./") #always grab level 0, so it doesn't disappear from the zip
         f = open(levelname, 'r')
     except FileNotFoundError:
-        #extract_files("levels.zip",'level0.h',"./")
-        statusString = str(levelname) + " not found, blank template loaded"
-        print(str(levelname) + " not found, blank template loaded")
+        print(f"{levelname} not found, blank template loaded")
         f = open("levels/level000.h", 'r')
         newLevel = True
     y = 0
-
     arr = None
     details = []
-    print("reading file " + str(levelname))
     for line in f:
-        if newLevel == True:
+        if newLevel:
             id = 0
             newLevel = False
         id2 = str(id).zfill(4)
-        print(id2)
-        levelName = "lvl" + str(id2)
+        levelName = f"lvl{id2}"
         if levelName in line:
-            print("found level details")
             details = line.split(' ')[1].replace(']', '').split('[')
-            arr = [[0 for _ in range(int(details[2]) )] for _ in range(int(details[1]))]
+            arr = [[0 for _ in range(int(details[2]))] for _ in range(int(details[1]))]
         elif "{" in line and ',' in line:
-            data = line.replace('{', '').replace('}', '').replace(', ','').replace(' ','').replace('\n','').strip()
+            data = line.replace('{', '').replace('}', '').replace(', ', '').replace(' ', '').replace('\n', '').strip()
             row = data.split(',')
             arr[y] = [int(i) for i in row[0:-1]]
             y += 1
         elif "};" in line:
             break
-    
     f.close()
-    #os.remove(levelname)
     return arr, details
 
-
-data = readFile(0)
-statusTimeout = 0
-statusString = "loaded map: level" + str(id) + ".h"
-yTiles = int(data[1][1])
-xTiles = int(data[1][2])
-#print(data)
-yDim = (yTiles ) * tileSize
-xDim = (xTiles ) * tileSize
-#print(xDim)
-screenyDim = (yTiles) * tileSize
-screenxDim = (xTiles) * tileSize
-data = data[0]
-mouse1Held = False
-screen = pygame.display.set_mode((screenxDim,screenyDim))
+# Initialize Pygame
 pygame.init()
 pygame.font.init()
-my_font = pygame.font.SysFont('Arial', 30)
-running = True
+my_font = pygame.font.SysFont('Arial', 20)
+
+data, details = readFile(0)
+statusString = f"loaded map: level{id}.h"
+yTiles = int(details[1])
+xTiles = int(details[2])
+maxTiles = 3
+screenyDim = 1280
+screenxDim = 1900
+
+screen = pygame.display.set_mode((screenxDim, screenyDim),pygame.RESIZABLE)
 pygame.mouse.set_visible(False)
-#rows, cols = (20, 40)
-#arr = [[0 for _ in range(cols)] for _ in range(rows)]  # initialize the array
 
-
-
-#main UI loop
+# Main loop
+running = True
+mouse1Held = False
 while running:
-    statusTimeout = statusTimeout + 1
-    if statusTimeout >= statusLimit:
-        statusString = ""
-        statusTimeout = 0
-    screen.fill("black")
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.KEYUP:
-            #print(event.scancode)
+        elif event.type == pygame.KEYUP:
+            print(event.scancode)
+            if event.key == pygame.K_F6 or event.scancode == 45 or event.scancode == 86:
+                print("Zoom out")
+                writeToFile(id)
+                try:
+                    os.remove('./levels.h')
+                    statusTimeout = 0
+                    statusString = "removed old levels.h"
+                    time.sleep(1) #give it a chance to clean up file                    
+                except:
+                    statusTimeout = 0
+                    statusString = "unable to remove old levels.h?"
+                statusTimeout = 0
+                statusString = "packed all levels"
+                concat_and_pack()
+                bigMap = True
+            if event.key == pygame.K_F7 or event.scancode == 46 or event.scancode == 87:
+                print("Zoom in")
+                bigMap = False
             if event.scancode == 41:
                 writeToFile(id)
                 statusString = "saved map: level" + str(id) + ".h, exiting editor"
                 running = False
-            if event.scancode == 63:
-                statusTimeout = 0
-                statusString = "zoom out"
-                bigMap = True
-            if event.scancode == 64:
-                statusTimeout = 0
-                statusString = "zoom in"
-                
             if event.scancode == 62:
 #                print("zip functionality disabled")
                 try:
@@ -232,11 +337,6 @@ while running:
                 data = data[0]
                 statusTimeout = 0
                 statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
-                
-        text_surface = my_font.render("map: " + str(id), False, (0, 0, 0))
-        text_surface2 = my_font.render("F2/F3 select map | F4 save current map | F5 pack all maps into levels.h", False, (0, 0, 0))
-        statusText = my_font.render(statusString, False, (0, 0, 0))
-       
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse1Held = True
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -245,17 +345,17 @@ while running:
         if mouse1Held == True:
             mousePosition = pygame.mouse.get_pos()
             try:
-                tileMapPosition_x = int(mousePosition[0] / tileSize)
-                tileMapPosition_y = int(mousePosition[1] / tileSize)
-            #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*tileSize+tileSize,y*tileSize+tileSize))
+                tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
+                tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+            #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
 #                print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 data[tileMapPosition_y][tileMapPosition_x] = cursorState
                 statusString = "placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
                 statusTimeout = 0
             except:
-                tileMapPosition_x = int(mousePosition[0] / tileSize)
-                tileMapPosition_y = int(mousePosition[1] / tileSize)
-            #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*tileSize+tileSize,y*tileSize+tileSize))
+                tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
+                tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+            #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                 statusString = "cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
                 statusTimeout = 0
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -271,53 +371,22 @@ while running:
             if event.button == 1:
                 mousePosition = pygame.mouse.get_pos()
                 try:
-                    tileMapPosition_x = int(mousePosition[0] / tileSize)
-                    tileMapPosition_y = int(mousePosition[1] / tileSize)
-                #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*tileSize+tileSize,y*tileSize+tileSize))
+                    tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
+                    tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+                #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                     print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     data[tileMapPosition_y][tileMapPosition_x] = cursorState
                     statusString = "placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
                     statusTimeout = 0
                 except:
-                    tileMapPosition_x = int(mousePosition[0] / tileSize)
-                    tileMapPosition_y = int(mousePosition[1] / tileSize)
-                #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*tileSize+tileSize,y*tileSize+tileSize))
+                    tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
+                    tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+                #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                     statusString = "cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
                     statusTimeout = 0
-    y = 0
     
-    for row in data:
-        x = 0
-        for item in row:
-            tilePos = (x*tileSize,y*tileSize)
-            if item == WATER:
-                pygame.draw.rect(screen,"cornflowerblue",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
-            elif item == GRASS:
-                pygame.draw.rect(screen,"chartreuse4",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
-            elif item == SAND:
-                pygame.draw.rect(screen,"burlywood3",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
-            elif item == STONE:
-                pygame.draw.rect(screen,"darkgrey",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
-            else:
-                pygame.draw.rect(screen,"white",(x*tileSize,y*tileSize,x*tileSize+tileSize,y*tileSize+tileSize))
-            x = x + 1
-        y = y + 1
-        screen.blit(text_surface, (0,0))
-        screen.blit(text_surface2, (150,0))
-        screen.blit(statusText, (150,screenyDim-50))
-        pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
-        if cursorState == WATER:
-            pygame.draw.circle(screen, "cornflowerblue", pygame.mouse.get_pos(), 4)
-        if cursorState == GRASS:
-            pygame.draw.circle(screen, "chartreuse4", pygame.mouse.get_pos(), 4)
-        if cursorState == SAND:
-            pygame.draw.circle(screen, "burlywood3", pygame.mouse.get_pos(), 4)
-        if cursorState == STONE:
-            pygame.draw.circle(screen, "darkgrey", pygame.mouse.get_pos(), 4)
-       # if cursorState == 3:
-       #     pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 6)
-       #     pygame.draw.circle(screen, "white", pygame.mouse.get_pos(), 4)
-    pygame.display.flip()
+    render_map(bigMap,id)
+    pygame.display.flip()  # Ensure the display updates
+
 time.sleep(1)
 pygame.quit()
-
