@@ -7,6 +7,8 @@ import time
 import re
 import numpy as np
 import random
+from noise import snoise2
+
 # Tile types
 WATER = 0
 SAND = 1
@@ -23,8 +25,8 @@ TILE_COLORS = {
 }
 
 # Define constants
-COLUMNS = 5 #number of columns of tilemaps to make big map
-NUM_MAPS = 25 #total number of maps
+COLUMNS = 10 #number of columns of tilemaps to make big map
+NUM_MAPS = 100 #total number of maps
 
 TILE_SIZE = 32
 TILEMAP_WIDTH = 40
@@ -37,9 +39,45 @@ statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 id = 0
+
+def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0):
+    """Generate a terrain map with given dimensions using Perlin noise."""
+    terrain_map = np.zeros((height, width), dtype=np.int32)
+    octaves = random.randint(1,12)
+    persistence = random.uniform(0.1,0.9)
+    #lacunarity = random.uniform(0.0,4.0)
+    base = (random.randint(0,100000)) * 2
+    for y in range(height):
+        for x in range(width):
+            # Generate Perlin noise value at (x, y) with the given parameters
+            noise_value = snoise2(x / scale,
+                                  y / scale,
+                                  octaves=octaves,
+                                  persistence=persistence,
+                                  lacunarity=lacunarity,
+                                  repeatx=width,
+                                  repeaty=height,
+                                  base=base)  # Base value for noise
+            
+            # Normalize the noise value to be between 0 and 1
+            normalized_value = (noise_value + 1) / 2
+
+            # Map the normalized value to a tile type
+            if normalized_value < 0.2:
+                terrain_map[y, x] = WATER
+            elif normalized_value < 0.4:
+                terrain_map[y, x] = SAND
+            elif normalized_value < 0.6:
+                terrain_map[y, x] = GRASS
+            else:
+                terrain_map[y, x] = STONE
+
+    return terrain_map
+
 def create_random_map(width, height):
     """Generate a random tilemap with given dimensions."""
-    return np.random.randint(low=0, high=1 + 1, size=(height, width), dtype=np.int32)
+    #return np.random.randint(low=0, high=2 + 1, size=(height, width), dtype=np.int32)
+    return create_terrain_map(width,height)
 
 def save_map_to_file(map_data, file_name, id):
     """Save the map data to a file."""
@@ -124,7 +162,7 @@ def render_tilemap(tilemap, bigMap, id):
     if not bigMap:
         TILE_SIZE = 32
     elif bigMap:
-        TILE_SIZE = 2
+        TILE_SIZE = 4
     # Use a background color to clear the screen
     background_color = (0, 0, 0)  # Black background
 
@@ -141,10 +179,12 @@ def render_tilemap(tilemap, bigMap, id):
 
 
         # Display status texts
-        text_surface = my_font.render("map: " + str(id), False, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", False, (255,255,255))
+        text_surface = my_font.render("map: " + str(id), True, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", True, (255,255,255))
+        
         screen.blit(text_surface, (0, screenyDim - 50))
         screen.blit(text_surface2, (150, screenyDim - 50))
+        
 
         pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), 6)
         cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
@@ -174,10 +214,12 @@ def render_tilemap(tilemap, bigMap, id):
                 index_text = my_font.render(str(idx), True, (255, 255, 255))
                 pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
-        text_surface = my_font.render("map: " + str(id), False, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", False, (255,255,255))
+        text_surface = my_font.render("map: " + str(id), True, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", True, (255,255,255))
+        text_surface3 = my_font.render("F12 to randomize tiles",True,(255,255,255))
         screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
         screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
+        screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
     pygame.display.flip()
 
 def render_map(bigMap,id):
@@ -344,6 +386,7 @@ while running:
             if event.scancode == 69:
                 print("generating tiles")
                 generate_and_save_maps(NUM_MAPS)
+                concat_and_pack()
             if event.scancode == 60:
                 #print("next map")
                 writeToFile(id)
