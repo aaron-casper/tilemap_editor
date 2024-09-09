@@ -139,7 +139,10 @@ def render_tilemap(tilemap, bigMap, id):
             col = idx % num_columns
             tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
             pygame.draw.rect(screen, (128, 128, 128), tile_rect, 2)  # Draw rectangle around the tilemap
-            index_text = my_font.render(str(idx), True, (255, 255, 255))
+            if idx == id:
+                index_text = my_font.render(str(idx), True, (255, 0, 0))
+            else:
+                index_text = my_font.render(str(idx), True, (255, 255, 255))
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
         text_surface = my_font.render("map: " + str(id), False, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", False, (255,255,255))
