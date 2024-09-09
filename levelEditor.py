@@ -13,17 +13,17 @@ STONE = 3
 maxTiles = 3 #should equal the index of the last tile
 
 
-tileSize = 32
+tileSize = 4
 cursorState = 0
-id = 1
+id = 0
 statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 
 def concat_and_pack():
-    filenames = glob.glob('./*h')
+    filenames = glob.glob('levels/*h')
     #filenames = fileList
-    with open('./levels.h', 'w') as outfile:
+    with open('levels.h', 'w') as outfile:
         for fname in filenames:
             with open(fname) as infile:
                 for line in infile:
@@ -71,9 +71,10 @@ def create_zip_with_headers(zip_filename, directory):
 
 
 def writeToFile(id):
-    levelname = "./level" + str(id) + ".h"
+    id = str(id).zfill(3)
+    levelname = "levels/level" + str(id) + ".h"
     f = open(levelname, 'w')
-    outputString = "int lvl" + str(id) + "[" + str(int(yTiles)) + "][" + str(int(xTiles)) + "] =\n{\n"
+    outputString = "int lvl0" + str(id) + "[" + str(int(yTiles)) + "][" + str(int(xTiles)) + "] =\n{\n"
     
     for rowIndex, row in enumerate(data):
         outputString += "    { "
@@ -99,8 +100,8 @@ def writeToFile(id):
 def readFile(id):
     
     newLevel = False
-    levelname = str("level" + str(id) + ".h")
-    print("zip functionality disabled")
+    id2 = str(id).zfill(3)
+    levelname = str("levels/level" + str(id2) + ".h")
     #print("extracting " + levelname)
     try:
         #extract_files("levels.zip",levelname,"./")
@@ -110,7 +111,7 @@ def readFile(id):
         #extract_files("levels.zip",'level0.h',"./")
         statusString = str(levelname) + " not found, blank template loaded"
         print(str(levelname) + " not found, blank template loaded")
-        f = open("level0.h", 'r')
+        f = open("levels/level000.h", 'r')
         newLevel = True
     y = 0
 
@@ -123,6 +124,7 @@ def readFile(id):
             newLevel = False
         levelName = "lvl" + str(id)
         if levelName in line:
+            print("found level details")
             details = line.split(' ')[1].replace(']', '').split('[')
             arr = [[0 for _ in range(int(details[2]) )] for _ in range(int(details[1]))]
         elif "{" in line and ',' in line:
@@ -188,6 +190,14 @@ while running:
                 
             if event.scancode == 62:
 #                print("zip functionality disabled")
+                try:
+                    os.remove('./levels.h')
+                    statusTimeout = 0
+                    statusString = "removed old levels.h"
+                    time.sleep(1) #give it a chance to clean up file                    
+                except:
+                    statusTimeout = 0
+                    statusString = "unable to remove old levels.h?"
                 statusTimeout = 0
                 statusString = "packed all levels"
                 concat_and_pack()

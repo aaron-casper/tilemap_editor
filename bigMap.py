@@ -79,7 +79,7 @@ def create_small_tilemaps(tilemaps):
 # Function to generate a large tilemap from small tilemaps
 def generate_large_tilemap(small_tilemaps):
     num_tiles = len(small_tilemaps)
-    num_columns = 3
+    num_columns = 10
     num_rows = (num_tiles + num_columns - 1) // num_columns
 
     large_tilemap = np.zeros((num_rows * TILEMAP_HEIGHT, num_columns * TILEMAP_WIDTH), dtype=np.int32)
