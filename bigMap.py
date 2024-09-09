@@ -92,10 +92,10 @@ def generate_large_tilemap(small_tilemaps):
     return large_tilemap
 
 # Function to render the tilemap using Pygame
-def render_tilemap(tilemap):
+def render_tilemap(tilemap, small_tilemaps):
     pygame.init()
     pygame.font.init()
-    my_font = pygame.font.SysFont('Arial', 24)
+    my_font = pygame.font.SysFont('Arial', 30)
     screen_width, screen_height = tilemap.shape[1] * TILE_SIZE, tilemap.shape[0] * TILE_SIZE
     screen = pygame.display.set_mode((screen_width, screen_height))
     
@@ -103,7 +103,7 @@ def render_tilemap(tilemap):
     tile_rects = {}
     for tile_id, color in TILE_COLORS.items():
         tile_surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
-        tile_surface.fill(color)           
+        tile_surface.fill(color)
         tile_rects[tile_id] = tile_surface
 
     running = True
@@ -118,7 +118,18 @@ def render_tilemap(tilemap):
                 tile_id = tilemap[y, x]
                 if tile_id in tile_rects:
                     screen.blit(tile_rects[tile_id], (x * TILE_SIZE, y * TILE_SIZE))
-                    
+        
+        # Draw the index for each small tilemap
+        num_tiles = len(small_tilemaps)
+        num_columns = 10
+        for idx in range(num_tiles):
+            row = idx // num_columns
+            col = idx % num_columns
+            tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
+            pygame.draw.rect(screen, (128, 128, 128), tile_rect, 2)  # Draw rectangle around the tilemap
+            index_text = my_font.render(str(idx), True, (255, 255, 255))
+            screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
+        
         pygame.display.flip()
 
     pygame.quit()
@@ -138,4 +149,4 @@ if __name__ == "__main__":
         large_tilemap = generate_large_tilemap(small_tilemaps)
 
         # Render the large tilemap using Pygame
-        render_tilemap(large_tilemap)
+        render_tilemap(large_tilemap, small_tilemaps)
