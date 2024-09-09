@@ -10,10 +10,10 @@ TILEMAP_HEIGHT = 32
 
 # Define colors for each tile ID
 TILE_COLORS = {
-    0: (0, 0, 255),
-    1: (255, 0, 0),
-    2: (0, 255, 0),
-    3: (128, 128, 128),
+    0: (0, 0, 128),
+    1: (96, 64, 0),
+    2: (0, 128, 0),
+    3: (96, 96, 96),
     # Add more colors as needed
 }
 
