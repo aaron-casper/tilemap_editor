@@ -111,6 +111,11 @@ def render_tilemap(tilemap, small_tilemaps):
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
+            if event.type == pygame.KEYUP:
+                if event.scancode == 62:
+                    reload_map()
+
+
         
         # Draw the tilemap
         for y in range(tilemap.shape[0]):
@@ -134,6 +139,15 @@ def render_tilemap(tilemap, small_tilemaps):
 
     pygame.quit()
 
+def reload_map():
+        small_tilemaps = create_small_tilemaps(tilemaps)
+
+        # Generate a large tilemap
+        large_tilemap = generate_large_tilemap(small_tilemaps)
+
+        # Render the large tilemap using Pygame
+        render_tilemap(large_tilemap, small_tilemaps)
+
 if __name__ == "__main__":
     # Parse the tilemap data from the file
     tilemaps = parse_tilemap_data('levels.h')
@@ -143,10 +157,4 @@ if __name__ == "__main__":
         print("No tilemaps found. Check the file and regular expression.")
     else:
         # Create smaller tilemaps
-        small_tilemaps = create_small_tilemaps(tilemaps)
-
-        # Generate a large tilemap
-        large_tilemap = generate_large_tilemap(small_tilemaps)
-
-        # Render the large tilemap using Pygame
-        render_tilemap(large_tilemap, small_tilemaps)
+        reload_map()
