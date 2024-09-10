@@ -6,6 +6,8 @@ import glob
 import time
 import re
 import numpy as np
+import random
+from noise import snoise2
 
 # Tile types
 WATER = 0
@@ -23,7 +25,11 @@ TILE_COLORS = {
 }
 
 # Define constants
+COLUMNS = 20 #number of columns of tilemaps to make big map
+NUM_MAPS = 300 #total number of maps
+
 TILE_SIZE = 32
+SMALL_TILE_SIZE = 2
 TILEMAP_WIDTH = 40
 TILEMAP_HEIGHT = 32
 
@@ -34,6 +40,65 @@ statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 id = 0
+
+def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0):
+    """Generate a terrain map with given dimensions using Perlin noise."""
+    terrain_map = np.zeros((height, width), dtype=np.int32)
+    octaves = random.randint(1,12)
+    persistence = random.uniform(0.1,0.9)
+    #lacunarity = random.uniform(0.0,4.0)
+    base = (random.randint(0,100000)) * 2
+    for y in range(height):
+        for x in range(width):
+            # Generate Perlin noise value at (x, y) with the given parameters
+            noise_value = snoise2(x / scale,
+                                  y / scale,
+                                  octaves=octaves,
+                                  persistence=persistence,
+                                  lacunarity=lacunarity,
+                                  repeatx=width,
+                                  repeaty=height,
+                                  base=base)  # Base value for noise
+            
+            # Normalize the noise value to be between 0 and 1
+            normalized_value = (noise_value + 1) / 2
+
+            # Map the normalized value to a tile type
+            if normalized_value < 0.2:
+                terrain_map[y, x] = WATER
+            elif normalized_value < 0.4:
+                terrain_map[y, x] = SAND
+            elif normalized_value < 0.6:
+                terrain_map[y, x] = GRASS
+            else:
+                terrain_map[y, x] = STONE
+
+    return terrain_map
+
+def create_random_map(width, height):
+    """Generate a random tilemap with given dimensions."""
+    #return np.random.randint(low=0, high=2 + 1, size=(height, width), dtype=np.int32)
+    return create_terrain_map(width,height)
+
+def save_map_to_file(map_data, file_name, id):
+    """Save the map data to a file."""
+    with open(file_name, 'w') as f:
+        height, width = map_data.shape
+        id2 = str(id).zfill(3)
+        outputString = f"int lvl0{id2}[{yTiles}][{xTiles}] =\n{{\n"
+        f.write(outputString)
+        for row in map_data:
+            row_str = ','.join(map(str, row.flatten()))
+            f.write(f'    {{{ row_str }}},\n')
+        f.write('};\n')
+
+def generate_and_save_maps(num_maps):
+    """Generate and save a number of random maps."""
+    for i in range(num_maps):
+        id = i
+        map_data = create_random_map(TILEMAP_WIDTH, TILEMAP_HEIGHT)
+        save_map_to_file(map_data, f'levels/level{i:03d}.h', id)
+
 
 def parse_tilemap_data(filename):
     with open(filename, 'r') as file:
@@ -82,7 +147,7 @@ def create_small_tilemaps(tilemaps):
 
 def generate_large_tilemap(small_tilemaps):
     num_tiles = len(small_tilemaps)
-    num_columns = 10
+    num_columns = COLUMNS
     num_rows = (num_tiles + num_columns - 1) // num_columns
 
     large_tilemap = np.zeros((num_rows * TILEMAP_HEIGHT, num_columns * TILEMAP_WIDTH), dtype=np.int32)
@@ -98,7 +163,7 @@ def render_tilemap(tilemap, bigMap, id):
     if not bigMap:
         TILE_SIZE = 32
     elif bigMap:
-        TILE_SIZE = 4
+        TILE_SIZE = SMALL_TILE_SIZE
     # Use a background color to clear the screen
     background_color = (0, 0, 0)  # Black background
 
@@ -115,10 +180,12 @@ def render_tilemap(tilemap, bigMap, id):
 
 
         # Display status texts
-        text_surface = my_font.render("map: " + str(id), False, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", False, (255,255,255))
+        text_surface = my_font.render("map: " + str(id), True, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", True, (255,255,255))
+        
         screen.blit(text_surface, (0, screenyDim - 50))
         screen.blit(text_surface2, (150, screenyDim - 50))
+        
 
         pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), 6)
         cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
@@ -135,23 +202,25 @@ def render_tilemap(tilemap, bigMap, id):
         tilemaps = parse_tilemap_data('levels.h')
         small_tilemaps = create_small_tilemaps(tilemaps)
         num_tiles = len(small_tilemaps)
-        num_columns = 10
+        num_columns = COLUMNS
         for idx in range(num_tiles):
             row = idx // num_columns
             col = idx % num_columns
             tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
             
             if idx == id:
-                index_text = my_font.render(str(idx), True, (255, 0, 0))
+                index_text = small_my_font.render(str(idx), True, (255, 0, 0))
                 pygame.draw.rect(screen, (255, 0, 0), tile_rect, 2)  # Draw rectangle around the tilemap
             else:
-                index_text = my_font.render(str(idx), True, (255, 255, 255))
+                index_text = small_my_font.render(str(idx), True, (255, 255, 255))
                 pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
-        text_surface = my_font.render("map: " + str(id), False, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", False, (255,255,255))
+        text_surface = my_font.render("map: " + str(id), True, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", True, (255,255,255))
+        text_surface3 = my_font.render("F12 to randomize tiles",True,(255,255,255))
         screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
         screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
+        screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
     pygame.display.flip()
 
 def render_map(bigMap,id):
@@ -218,6 +287,7 @@ def writeToFile(id):
 def readFile(id):
     id2 = str(id).zfill(3)
     levelname = f"levels/level{id2}.h"
+    global newLevel
     newLevel = False
     try:
         f = open(levelname, 'r')
@@ -231,7 +301,7 @@ def readFile(id):
     for line in f:
         if newLevel:
             id = 0
-            newLevel = False
+            #newLevel = False
         id2 = str(id).zfill(4)
         levelName = f"lvl{id2}"
         if levelName in line:
@@ -251,7 +321,7 @@ def readFile(id):
 pygame.init()
 pygame.font.init()
 my_font = pygame.font.SysFont('Arial', 20)
-
+small_my_font = pygame.font.SysFont('Arial', 10)
 data, details = readFile(0)
 statusString = f"loaded map: level{id}.h"
 yTiles = int(details[1])
@@ -267,7 +337,6 @@ pygame.mouse.set_visible(False)
 running = True
 mouse1Held = False
 while running:
-    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -315,6 +384,10 @@ while running:
                 statusTimeout = 0
                 statusString = "saved map: level" + str(id) + ".h"
                 writeToFile(id)
+            if event.scancode == 69:
+                print("generating tiles")
+                generate_and_save_maps(NUM_MAPS)
+                concat_and_pack()
             if event.scancode == 60:
                 #print("next map")
                 writeToFile(id)
@@ -325,7 +398,10 @@ while running:
                 statusTimeout = 0
                 statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
                 writeToFile(id)
-
+                print(newLevel)
+                if newLevel == True:
+                    concat_and_pack()
+                    newLevel = False
             if event.scancode == 59:
                 #print("prev map")
                 writeToFile(id)
