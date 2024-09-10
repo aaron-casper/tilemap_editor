@@ -8,6 +8,8 @@ import re
 import numpy as np
 import random
 from noise import snoise2
+import tkinter as tk
+from tkinter import simpledialog
 
 # Tile types
 WATER = 0
@@ -40,13 +42,14 @@ statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 id = 0
-
+#random terrain generation function
+#adjust octaves, persistence, lacunarity for different results
 def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0):
     """Generate a terrain map with given dimensions using Perlin noise."""
     terrain_map = np.zeros((height, width), dtype=np.int32)
     octaves = random.randint(1,12)
     persistence = random.uniform(0.1,0.9)
-    #lacunarity = random.uniform(0.0,4.0)
+    lacunarity = random.uniform(0.0,4.0)
     base = (random.randint(0,100000)) * 2
     for y in range(height):
         for x in range(width):
@@ -99,6 +102,13 @@ def generate_and_save_maps(num_maps):
         map_data = create_random_map(TILEMAP_WIDTH, TILEMAP_HEIGHT)
         save_map_to_file(map_data, f'levels/level{i:03d}.h', id)
 
+def prompt_for_integer():
+    root = tk.Tk()
+    root.withdraw()  # Hide the main Tkinter window
+    user_input = simpledialog.askinteger("Input", "Go to map: ")
+    if user_input is not None:
+        return user_input
+    return 0
 
 def parse_tilemap_data(filename):
     with open(filename, 'r') as file:
@@ -342,6 +352,11 @@ while running:
             running = False
         elif event.type == pygame.KEYUP:
             print(event.scancode)
+            if event.key == pygame.K_F11:
+                mapSearch = prompt_for_integer()
+                id = mapSearch
+                data = readFile(id)
+                data = data[0]
             if event.key == pygame.K_F6 or event.scancode == 45 or event.scancode == 86:
                 print("Zoom out")
                 writeToFile(id)
@@ -396,7 +411,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
+                statusString = "saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h"
                 writeToFile(id)
                 print(newLevel)
                 if newLevel == True:
