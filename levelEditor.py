@@ -227,10 +227,12 @@ def render_tilemap(tilemap, bigMap, id):
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", True, (255,255,255))
-        text_surface3 = my_font.render("F12 to randomize tiles",True,(255,255,255))
+        text_surface3 = my_font.render("F11 go to map [id]",True,(255,255,255))
+        text_surface4 = my_font.render("F12 randomize maps",True,(255,255,255))
         screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
         screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
         screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
+        screen.blit(text_surface4, (screenxDim - 300, screenyDim - 200))
     pygame.display.flip()
 
 def render_map(bigMap,id):
@@ -353,6 +355,7 @@ while running:
         elif event.type == pygame.KEYUP:
             print(event.scancode)
             if event.key == pygame.K_F11:
+                writeToFile(id) #save map before loading a new one
                 mapSearch = prompt_for_integer()
                 id = mapSearch
                 data = readFile(id)
