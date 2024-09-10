@@ -44,16 +44,49 @@ statusLimit = 100
 id = 0
 #random terrain generation function
 #adjust octaves, persistence, lacunarity for different results
-def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0):
-    """Generate a terrain map with given dimensions using Perlin noise."""
+import numpy as np
+import random
+from noise import snoise2
+
+# Define terrain types
+WATER = 0
+SAND = 1
+GRASS = 2
+STONE = 3
+
+def add_river(terrain_map, start_pos, width, height):
+    """Add a river to the terrain map from the start position."""
+    x, y = start_pos
+    river_width = random.randint(1,2)  # Width of the river
+    length = random.randint(30, 100)  # Random length of the river
+    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # Directions: down, right, up, left
+
+    for _ in range(length):
+        if 0 <= x < width and 0 <= y < height:
+            # Set the current cell and surrounding cells to water
+            for dx in range(-river_width, river_width + 1):
+                for dy in range(-river_width, river_width + 1):
+                    if 0 <= x + dx < width and 0 <= y + dy < height:
+                        distance = np.sqrt(dx**2 + dy**2)
+                        if distance <= river_width:
+                            terrain_map[y + dy, x + dx] = WATER
+            
+            # Randomly choose next direction to move
+            direction = random.choice(directions)
+            x += direction[0]
+            y += direction[1]
+    
+    return terrain_map
+
+def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5):
+    """Generate a terrain map with given dimensions using Perlin noise and rivers."""
+    
     terrain_map = np.zeros((height, width), dtype=np.int32)
-    octaves = random.randint(1,12)
-    persistence = random.uniform(0.1,0.9)
-    lacunarity = random.uniform(0.0,4.0)
-    base = (random.randint(0,100000)) * 2
+    #print("generating terrain")
+    # Generate terrain using Perlin noise
+    base = random.randint(0, 100000) * 2
     for y in range(height):
         for x in range(width):
-            # Generate Perlin noise value at (x, y) with the given parameters
             noise_value = snoise2(x / scale,
                                   y / scale,
                                   octaves=octaves,
@@ -61,12 +94,10 @@ def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, la
                                   lacunarity=lacunarity,
                                   repeatx=width,
                                   repeaty=height,
-                                  base=base)  # Base value for noise
+                                  base=base)
             
-            # Normalize the noise value to be between 0 and 1
             normalized_value = (noise_value + 1) / 2
 
-            # Map the normalized value to a tile type
             if normalized_value < 0.2:
                 terrain_map[y, x] = WATER
             elif normalized_value < 0.4:
@@ -75,9 +106,14 @@ def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, la
                 terrain_map[y, x] = GRASS
             else:
                 terrain_map[y, x] = STONE
+    
+    # Add rivers to the terrain map
+    #print("generating waterways")
+    for _ in range(num_rivers):
+        start_pos = (random.randint(0, width-1), random.randint(0, height-1))
+        terrain_map = add_river(terrain_map, start_pos, width, height)
 
     return terrain_map
-
 def create_random_map(width, height):
     """Generate a random tilemap with given dimensions."""
     #return np.random.randint(low=0, high=2 + 1, size=(height, width), dtype=np.int32)
@@ -101,6 +137,10 @@ def generate_and_save_maps(num_maps):
         id = i
         map_data = create_random_map(TILEMAP_WIDTH, TILEMAP_HEIGHT)
         save_map_to_file(map_data, f'levels/level{i:03d}.h', id)
+
+def updateStatusLine(statusString):
+    text_surface3 = my_font.render(statusString, True, (255,255,255))
+    return text_surface3
 
 def prompt_for_integer():
     root = tk.Tk()
@@ -195,7 +235,7 @@ def render_tilemap(tilemap, bigMap, id):
         
         screen.blit(text_surface, (0, screenyDim - 50))
         screen.blit(text_surface2, (150, screenyDim - 50))
-        
+        screen.blit(status_text, (0, screenyDim - 100))
 
         pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), 6)
         cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
@@ -229,10 +269,13 @@ def render_tilemap(tilemap, bigMap, id):
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", True, (255,255,255))
         text_surface3 = my_font.render("F11 go to map [id]",True,(255,255,255))
         text_surface4 = my_font.render("F12 randomize maps",True,(255,255,255))
+        #text_surface5 = my_font.render(statusString, True, (255,255,255))
+        
         screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
         screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
         screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
         screen.blit(text_surface4, (screenxDim - 300, screenyDim - 200))
+        screen.blit(status_text, (screenxDim - 350, screenyDim - 250))
     pygame.display.flip()
 
 def render_map(bigMap,id):
@@ -335,7 +378,7 @@ pygame.font.init()
 my_font = pygame.font.SysFont('Arial', 20)
 small_my_font = pygame.font.SysFont('Arial', 10)
 data, details = readFile(0)
-statusString = f"loaded map: level{id}.h"
+status_text = updateStatusLine(f"loaded map: level{id}.h")
 yTiles = int(details[1])
 xTiles = int(details[2])
 maxTiles = 3
@@ -366,13 +409,13 @@ while running:
                 try:
                     os.remove('./levels.h')
                     statusTimeout = 0
-                    statusString = "removed old levels.h"
+                    status_text = updateStatusLine("removed old levels.h")
                     time.sleep(1) #give it a chance to clean up file                    
                 except:
                     statusTimeout = 0
-                    statusString = "unable to remove old levels.h?"
+                    status_text = updateStatusLine("unable to remove old levels.h?")
                 statusTimeout = 0
-                statusString = "packed all levels"
+                status_text = updateStatusLine("packed all levels")
                 concat_and_pack()
                 bigMap = True
             if event.key == pygame.K_F7 or event.scancode == 46 or event.scancode == 87:
@@ -380,30 +423,30 @@ while running:
                 bigMap = False
             if event.scancode == 41:
                 writeToFile(id)
-                statusString = "saved map: level" + str(id) + ".h, exiting editor"
+                status_text = updateStatusLine("saved map: level" + str(id) + ".h, exiting editor")
                 running = False
             if event.scancode == 62:
 #                print("zip functionality disabled")
                 try:
                     os.remove('./levels.h')
                     statusTimeout = 0
-                    statusString = "removed old levels.h"
+                    status_text = updateStatusLine("removed old levels.h")
                     time.sleep(1) #give it a chance to clean up file                    
                 except:
                     statusTimeout = 0
-                    statusString = "unable to remove old levels.h?"
+                    status_text = updateStatusLine("unable to remove old levels.h?")
                 statusTimeout = 0
-                statusString = "packed all levels"
+                status_text = updateStatusLine("packed all levels")
                 concat_and_pack()
                 #zip files back up
                 #create_zip_with_headers("./levels.zip","./")
                 #remove_all_h_files("./")
             if event.scancode == 61:
                 statusTimeout = 0
-                statusString = "saved map: level" + str(id) + ".h"
+                status_text = updateStatusLine("saved map: level" + str(id) + ".h")
                 writeToFile(id)
             if event.scancode == 69:
-                print("generating tiles")
+                status_text = updateStatusLine("generated maps" )
                 generate_and_save_maps(NUM_MAPS)
                 concat_and_pack()
             if event.scancode == 60:
@@ -414,7 +457,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                statusString = "saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h"
+                status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
                 writeToFile(id)
                 print(newLevel)
                 if newLevel == True:
@@ -430,7 +473,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                statusString = "saved map: " + str(id) + ", loaded map: level" + str(id) + ".h"
+                status_text = updateStatusLine("saved map: " + str(id) + ", loaded map: level" + str(id) + ".h")
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse1Held = True
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -444,13 +487,13 @@ while running:
             #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
 #                print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 data[tileMapPosition_y][tileMapPosition_x] = cursorState
-                statusString = "placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
+                status_text = updateStatusLine("placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 statusTimeout = 0
             except:
                 tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
                 tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
             #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
-                statusString = "cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
+                status_text = updateStatusLine("cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 statusTimeout = 0
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 4:
@@ -470,13 +513,13 @@ while running:
                 #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                     print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     data[tileMapPosition_y][tileMapPosition_x] = cursorState
-                    statusString = "placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
+                    status_text = updateStatusLine("placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     statusTimeout = 0
                 except:
                     tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
                     tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
                 #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
-                    statusString = "cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y)
+                    status_text = updateStatusLine("cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     statusTimeout = 0
     
     render_map(bigMap,id)
