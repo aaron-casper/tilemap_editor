@@ -10,7 +10,7 @@ import random
 from noise import snoise2
 import tkinter as tk
 from tkinter import simpledialog
-
+from tkinter import messagebox
 # Tile types
 WATER = 0
 SAND = 1
@@ -276,6 +276,7 @@ def render_tilemap(tilemap, bigMap, id):
         screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
         screen.blit(text_surface4, (screenxDim - 300, screenyDim - 200))
         screen.blit(status_text, (screenxDim - 350, screenyDim - 250))
+        
     pygame.display.flip()
 
 def render_map(bigMap,id):
@@ -446,9 +447,14 @@ while running:
                 status_text = updateStatusLine("saved map: level" + str(id) + ".h")
                 writeToFile(id)
             if event.scancode == 69:
-                status_text = updateStatusLine("generated maps" )
-                generate_and_save_maps(NUM_MAPS)
-                concat_and_pack()
+                proceed = messagebox.askokcancel("PROCESSING","Generating maps may take a moment.\n\nClick OK to begin, or CANCEL to abort\n\nYou will be notified when\nmap generation has completed.")
+                if proceed:
+                    status_text = updateStatusLine("generated maps" )
+                    generate_and_save_maps(NUM_MAPS)
+                    concat_and_pack()
+                    messagebox.showinfo("PROCESSING","Done generating maps!")
+                else:
+                    break
             if event.scancode == 60:
                 #print("next map")
                 writeToFile(id)
