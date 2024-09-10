@@ -212,8 +212,10 @@ def generate_large_tilemap(small_tilemaps):
 def render_tilemap(tilemap, bigMap, id):
     if not bigMap:
         TILE_SIZE = 32
+        pygame.mouse.set_visible(False)
     elif bigMap:
         TILE_SIZE = SMALL_TILE_SIZE
+        pygame.mouse.set_visible(True)
     # Use a background color to clear the screen
     background_color = (0, 0, 0)  # Black background
 
@@ -387,7 +389,7 @@ screenyDim = 1280
 screenxDim = 1900
 
 screen = pygame.display.set_mode((screenxDim, screenyDim),pygame.RESIZABLE)
-pygame.mouse.set_visible(False)
+
 
 # Main loop
 running = True
