@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
 from pygame._sdl2 import Window
-import zipfile
+#import zipfile
 import os
 import glob
 import time
@@ -32,7 +32,7 @@ COLUMNS = 20 #number of columns of tilemaps to make big map
 NUM_MAPS = 300 #total number of maps
 
 TILE_SIZE = 32
-SMALL_TILE_SIZE = 3
+SMALL_TILE_SIZE = 2
 TILEMAP_WIDTH = 40
 TILEMAP_HEIGHT = 32
 
