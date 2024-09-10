@@ -54,11 +54,33 @@ SAND = 1
 GRASS = 2
 STONE = 3
 
-def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5, num_buildings=10):
+def prompt_for_details():
+        details = {}
+        details['buildings'] = messagebox.askyesno("Configuration", "Include buildings? (yes/no)")
+        details['building_count'] = int(simpledialog.askstring("Configuration", "Building count [3] (integer):").strip())
+        details['rivers'] = messagebox.askyesno("Configuration", "Include rivers? (yes/no)")
+        details['river_width'] = float(simpledialog.askstring("Configuration", "River width [1] (integer):").strip())
+        details['terrain_scale'] = float(simpledialog.askstring("Configuration", "Terrain scale [10.0] (float):").strip())
+        details['octaves'] = int(simpledialog.askstring("Configuration", "Octaves [6] (integer):").strip())
+        details['persistence'] = float(simpledialog.askstring("Configuration", "Persistence [0.5] (float):").strip())
+        return details
+
+def create_terrain_map(width, height,settings, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5, num_buildings=10):
+    
     """Generate a terrain map with given dimensions using Perlin noise and add buildings."""
     terrain_map = np.zeros((height, width), dtype=np.int32)
-    num_buildings=random.randint(0,4)
-    num_rivers=random.randint(0,4)
+    if settings["buildings"] == True:
+        num_buildings=settings["building_count"]
+    elif settings["buildings"] == False:
+        num_buildings = 0
+    if settings["rivers"] == True:
+        num_rivers=random.randint(0,4)
+    elif settings["rivers"] == False:
+        num_rivers = 0
+    scale = settings["terrain_scale"]
+    octaves = settings["octaves"]
+    persistence = settings["persistence"]
+    river_width = int(settings["river_width"])
     # Generate terrain using Perlin noise
     base = random.randint(0, 100000) * 2
     for y in range(height):
@@ -86,7 +108,8 @@ def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, la
     # Add rivers to the terrain map
     for _ in range(num_rivers):
         start_pos = (random.randint(0, width-1), random.randint(0, height-1))
-        terrain_map = add_river(terrain_map, start_pos, width, height)
+        
+        terrain_map = add_river(terrain_map, start_pos, width, height,river_width)
     
     # Add buildings to the terrain map
     for _ in range(num_buildings):
@@ -101,10 +124,10 @@ def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, la
 
     return terrain_map
 
-def add_river(terrain_map, start_pos, width, height):
+def add_river(terrain_map, start_pos, width, height,river_width):
     """Add a river to the terrain map from the start position."""
     x, y = start_pos
-    river_width = 3
+    river_width = river_width
     length = random.randint(30, 100)
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
 
@@ -140,10 +163,10 @@ def can_place_building(terrain_map, start_x, start_y, width, height):
     return True
 
 
-def create_random_map(width, height):
+def create_random_map(width, height,settings):
     """Generate a random tilemap with given dimensions."""
     #return np.random.randint(low=0, high=2 + 1, size=(height, width), dtype=np.int32)
-    return create_terrain_map(width,height)
+    return create_terrain_map(width,height,settings)
 
 def save_map_to_file(map_data, file_name, id):
     """Save the map data to a file."""
@@ -157,11 +180,11 @@ def save_map_to_file(map_data, file_name, id):
             f.write(f'    {{{ row_str }}},\n')
         f.write('};\n')
 
-def generate_and_save_maps(num_maps):
+def generate_and_save_maps(num_maps,settings):
     """Generate and save a number of random maps."""
     for i in range(num_maps):
         id = i
-        map_data = create_random_map(TILEMAP_WIDTH, TILEMAP_HEIGHT)
+        map_data = create_random_map(TILEMAP_WIDTH, TILEMAP_HEIGHT,settings)
         save_map_to_file(map_data, f'levels/level{i:03d}.h', id)
 
 def updateStatusLine(statusString):
@@ -425,7 +448,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYUP:
-            print(event.scancode)
+            #print(event.scancode)
             if event.key == pygame.K_F11:
                 writeToFile(id) #save map before loading a new one
                 mapSearch = prompt_for_integer()
@@ -433,7 +456,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
             if event.key == pygame.K_F6 or event.scancode == 45 or event.scancode == 86:
-                print("Zoom out")
+                #print("Zoom out")
                 writeToFile(id)
                 try:
                     os.remove('./levels.h')
@@ -448,7 +471,7 @@ while running:
                 concat_and_pack()
                 bigMap = True
             if event.key == pygame.K_F7 or event.scancode == 46 or event.scancode == 87:
-                print("Zoom in")
+                #print("Zoom in")
                 bigMap = False
             if event.scancode == 41:
                 writeToFile(id)
@@ -475,10 +498,12 @@ while running:
                 status_text = updateStatusLine("saved map: level" + str(id) + ".h")
                 writeToFile(id)
             if event.scancode == 69:
-                proceed = messagebox.askokcancel("PROCESSING","Generating maps may take a moment.\n\nClick OK to begin, or CANCEL to abort\n\nYou will be notified when\nmap generation has completed.")
+                proceed = messagebox.askokcancel("PROCESSING","Generating maps may take a moment.\n\nClick OK to begin, or CANCEL to abort\n\nYou will be prompted for configuration details\nrecommended starting values are provided.\n\nYou will be notified when\nmap generation has completed.")
                 if proceed:
+                    settings = prompt_for_details()
+                    #print(settings)
                     status_text = updateStatusLine("generated maps" )
-                    generate_and_save_maps(NUM_MAPS)
+                    generate_and_save_maps(NUM_MAPS,settings)
                     concat_and_pack()
                     messagebox.showinfo("PROCESSING","Done generating maps!")
                 else:
@@ -493,7 +518,7 @@ while running:
                 statusTimeout = 0
                 status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
                 writeToFile(id)
-                print(newLevel)
+                #print(newLevel)
                 if newLevel == True:
                     concat_and_pack()
                     newLevel = False
@@ -549,7 +574,7 @@ while running:
                     tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
                     tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
                 #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
-                    print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
+                    #print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     data[tileMapPosition_y][tileMapPosition_x] = cursorState
                     status_text = updateStatusLine("placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     statusTimeout = 0
