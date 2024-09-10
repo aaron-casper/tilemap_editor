@@ -480,12 +480,14 @@ while running:
                 data = data[0]
                 statusTimeout = 0
                 status_text = updateStatusLine("saved map: " + str(id) + ", loaded map: level" + str(id) + ".h")
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not bigMap:
             mouse1Held = True
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and not bigMap:
             mouse1Held = False
 
         if mouse1Held == True:
+            if bigMap:
+                break
             mousePosition = pygame.mouse.get_pos()
             try:
                 tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
@@ -512,6 +514,8 @@ while running:
                     cursorState = maxTiles
             #print(event.button)
             if event.button == 1:
+                if bigMap:
+                    break
                 mousePosition = pygame.mouse.get_pos()
                 try:
                     tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
