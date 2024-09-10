@@ -1,5 +1,6 @@
 import pygame
 from pygame.locals import *
+from pygame._sdl2 import Window
 import zipfile
 import os
 import glob
@@ -31,7 +32,7 @@ COLUMNS = 20 #number of columns of tilemaps to make big map
 NUM_MAPS = 300 #total number of maps
 
 TILE_SIZE = 32
-SMALL_TILE_SIZE = 2
+SMALL_TILE_SIZE = 3
 TILEMAP_WIDTH = 40
 TILEMAP_HEIGHT = 32
 
@@ -57,7 +58,7 @@ STONE = 3
 def prompt_for_details():
         details = {}
         details['buildings'] = messagebox.askyesno("Configuration", "Include buildings? (yes/no)")
-        details['building_count'] = int(simpledialog.askstring("Configuration", "Building count [3] (integer):").strip())
+        details['building_count'] = int(simpledialog.askstring("Configuration", "Max buildings/map [3] (integer):").strip())
         details['rivers'] = messagebox.askyesno("Configuration", "Include rivers? (yes/no)")
         details['river_width'] = float(simpledialog.askstring("Configuration", "River width [1] (integer):").strip())
         details['terrain_scale'] = float(simpledialog.askstring("Configuration", "Terrain scale [10.0] (float):").strip())
@@ -70,7 +71,7 @@ def create_terrain_map(width, height,settings, scale=10.0, octaves=6, persistenc
     """Generate a terrain map with given dimensions using Perlin noise and add buildings."""
     terrain_map = np.zeros((height, width), dtype=np.int32)
     if settings["buildings"] == True:
-        num_buildings=settings["building_count"]
+        num_buildings=random.randint(0,int(settings["building_count"]))
     elif settings["buildings"] == False:
         num_buildings = 0
     if settings["rivers"] == True:
@@ -317,13 +318,15 @@ def render_tilemap(tilemap, bigMap, id):
                 pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom", True, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | +/- to enter/exit map", True, (255,255,255))
+        text_surface2b = my_font.render("MWHEEL scales up/down",True,(255,255,255))
         text_surface3 = my_font.render("F11 go to map [id]",True,(255,255,255))
         text_surface4 = my_font.render("F12 randomize maps",True,(255,255,255))
         #text_surface5 = my_font.render(statusString, True, (255,255,255))
         
         screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
         screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
+        screen.blit(text_surface2b, (screenxDim - 300, screenyDim - 75))
         screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
         screen.blit(text_surface4, (screenxDim - 300, screenyDim - 200))
         screen.blit(status_text, (screenxDim - 350, screenyDim - 250))
@@ -438,6 +441,7 @@ screenyDim = 1280
 screenxDim = 1900
 
 screen = pygame.display.set_mode((screenxDim, screenyDim),pygame.RESIZABLE)
+Window.from_display_module().maximize()
 
 
 # Main loop
@@ -558,10 +562,18 @@ while running:
                 statusTimeout = 0
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 4:
+                if bigMap:
+                    SMALL_TILE_SIZE = SMALL_TILE_SIZE + 1
+                    if SMALL_TILE_SIZE > 5:
+                        SMALL_TILE_SIZE = 5
                 cursorState = cursorState + 1
                 if cursorState > maxTiles:
                     cursorState = 0
             if event.button == 5:
+                if bigMap:
+                    SMALL_TILE_SIZE = SMALL_TILE_SIZE - 1
+                    if SMALL_TILE_SIZE < 1:
+                        SMALL_TILE_SIZE = 1
                 cursorState = cursorState - 1
                 if cursorState < 0:
                     cursorState = maxTiles
