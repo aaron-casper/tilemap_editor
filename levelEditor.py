@@ -198,7 +198,7 @@ def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persisten
     if settings["mazes"]:
         add_maze_to_terrain(terrain_map, maze)
     
-    print(terrain_map)
+    #print(terrain_map)
     return terrain_map
 
 def add_river(terrain_map, start_pos, width, height, river_width):
