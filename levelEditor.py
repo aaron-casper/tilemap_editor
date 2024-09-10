@@ -12,24 +12,34 @@ from noise import snoise2
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
-# Tile types
+
+
+#-------
+#tile defintions
+#-------
+# Constants for tile/terrain types
 WATER = 0
 SAND = 1
 GRASS = 2
 STONE = 3
+LAVA = 4
+
+#highest tile type value, don't ask why (because it's not a list, duh)
+maxTiles = 4
 
 # Define colors for each tile ID
 TILE_COLORS = {
     WATER: (0, 0, 128),
     SAND: (96, 64, 0),
-    GRASS: (0, 128, 0),
+    GRASS: (0, 96, 0),
     STONE: (96, 96, 96),
+    LAVA: (128,0,0),
     # Add more colors as needed
 }
 
 # Define constants
-COLUMNS = 20 #number of columns of tilemaps to make big map
-NUM_MAPS = 300 #total number of maps
+COLUMNS = 10 #number of columns of tilemaps to make big map
+NUM_MAPS = 100 #total number of maps
 
 TILE_SIZE = 32
 SMALL_TILE_SIZE = 2
@@ -49,15 +59,13 @@ import numpy as np
 import random
 from noise import snoise2
 
-# Define terrain types
-WATER = 0
-SAND = 1
-GRASS = 2
-STONE = 3
+
+
 
 def prompt_for_details():
         details = {}
         details['buildings'] = messagebox.askyesno("Configuration", "Include buildings? (yes/no)")
+        details['mazes'] = messagebox.askyesno("Configuration", "Mazes (yes/no)")
         details['building_count'] = int(simpledialog.askstring("Configuration", "Max buildings/map [3] (integer):").strip())
         details['rivers'] = messagebox.askyesno("Configuration", "Include rivers? (yes/no)")
         details['river_width'] = float(simpledialog.askstring("Configuration", "River width [1] (integer):").strip())
@@ -66,22 +74,84 @@ def prompt_for_details():
         details['persistence'] = float(simpledialog.askstring("Configuration", "Persistence [0.5] (float):").strip())
         return details
 
-def create_terrain_map(width, height,settings, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5, num_buildings=10):
+import numpy as np
+import random
+from noise import snoise2
+
+
+def generate_maze(width, height):
+    # Ensure dimensions are even for the maze generation
+    if width % 2 == 0:
+        width += 1
+    if height % 2 == 0:
+        height += 1
+
+    # Create a grid filled with stone tiles (non-passable) using NumPy array
+    maze = np.full((height, width), STONE, dtype=int)
     
+    # Define directions for moving in the maze (right, down, left, up)
+    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+    # Helper function to check if a cell is within the grid and is a stone tile
+    def in_bounds(x, y):
+        return 0 <= x < width and 0 <= y < height
+
+    # Depth-First Search to carve out the maze
+    def carve_maze(cx, cy):
+        maze[cy, cx] = GRASS  # Carve the current cell
+        random.shuffle(directions)
+        for direction in directions:
+            nx, ny = cx + direction[0] * 2, cy + direction[1] * 2
+            if in_bounds(nx, ny) and maze[ny, nx] == STONE:
+                # Carve the wall between the current cell and the next cell
+                maze[cy + direction[1], cx + direction[0]] = GRASS
+                carve_maze(nx, ny)
+
+    # Start carving the maze from a random position
+    start_x, start_y = random.randint(0, (width - 1) // 2) * 2, random.randint(0, (height - 1) // 2) * 2
+    carve_maze(start_x, start_y)
+    
+    return maze
+
+def add_maze_to_terrain(terrain_map, maze):
+    """Add a maze to the existing terrain map, only carving through stone tiles."""
+    t_height, t_width = terrain_map.shape
+    m_height, m_width = maze.shape
+    
+    # Compute the offset to center the maze on the terrain map
+    offset_x = (t_width - m_width) // 2
+    offset_y = (t_height - m_height) // 2
+    
+    for y in range(m_height):
+        for x in range(m_width):
+            if 0 <= y + offset_y < t_height and 0 <= x + offset_x < t_width:
+                # Only place maze tiles on stone tiles in the terrain map
+                if maze[y, x] == GRASS:  # Maze paths
+                    if terrain_map[y + offset_y, x + offset_x] == STONE:
+                        terrain_map[y + offset_y, x + offset_x] = GRASS
+
+def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5, num_buildings=10):
     """Generate a terrain map with given dimensions using Perlin noise and add buildings."""
     terrain_map = np.zeros((height, width), dtype=np.int32)
-    if settings["buildings"] == True:
-        num_buildings=random.randint(0,int(settings["building_count"]))
-    elif settings["buildings"] == False:
+    
+    if settings["buildings"]:
+        num_buildings = random.randint(0, int(settings["building_count"]))
+    else:
         num_buildings = 0
-    if settings["rivers"] == True:
-        num_rivers=random.randint(0,4)
-    elif settings["rivers"] == False:
+    
+    if settings["rivers"]:
+        num_rivers = random.randint(0, 4)
+    else:
         num_rivers = 0
+    
     scale = settings["terrain_scale"]
     octaves = settings["octaves"]
     persistence = settings["persistence"]
     river_width = int(settings["river_width"])
+    
+    if settings["mazes"]:
+        maze = generate_maze(width, height)
+    
     # Generate terrain using Perlin noise
     base = random.randint(0, 100000) * 2
     for y in range(height):
@@ -103,14 +173,15 @@ def create_terrain_map(width, height,settings, scale=10.0, octaves=6, persistenc
                 terrain_map[y, x] = SAND
             elif normalized_value < 0.6:
                 terrain_map[y, x] = GRASS
-            #else:
-            #    terrain_map[y, x] = STONE
+            elif normalized_value < 0.8:
+                terrain_map[y, x] = STONE
+            else:
+                terrain_map[y,x] = LAVA
     
     # Add rivers to the terrain map
     for _ in range(num_rivers):
         start_pos = (random.randint(0, width-1), random.randint(0, height-1))
-        
-        terrain_map = add_river(terrain_map, start_pos, width, height,river_width)
+        terrain_map = add_river(terrain_map, start_pos, width, height, river_width)
     
     # Add buildings to the terrain map
     for _ in range(num_buildings):
@@ -122,13 +193,17 @@ def create_terrain_map(width, height,settings, scale=10.0, octaves=6, persistenc
             if can_place_building(terrain_map, start_x, start_y, building_width, building_height):
                 terrain_map = add_building(terrain_map, start_x, start_y, building_width, building_height, width, height)
                 break
-
+    
+    # Add maze to the terrain map if specified
+    if settings["mazes"]:
+        add_maze_to_terrain(terrain_map, maze)
+    
+    print(terrain_map)
     return terrain_map
 
-def add_river(terrain_map, start_pos, width, height,river_width):
+def add_river(terrain_map, start_pos, width, height, river_width):
     """Add a river to the terrain map from the start position."""
     x, y = start_pos
-    river_width = river_width
     length = random.randint(30, 100)
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
 
@@ -162,6 +237,7 @@ def can_place_building(terrain_map, start_x, start_y, width, height):
             if terrain_map[y, x] == WATER:
                 return False
     return True
+
 
 
 def create_random_map(width, height,settings):
@@ -329,7 +405,7 @@ def render_tilemap(tilemap, bigMap, id):
         screen.blit(text_surface2b, (screenxDim - 300, screenyDim - 75))
         screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
         screen.blit(text_surface4, (screenxDim - 300, screenyDim - 200))
-        screen.blit(status_text, (screenxDim - 350, screenyDim - 250))
+        screen.blit(status_text, (screenxDim - 300, screenyDim - 250))
         
     pygame.display.flip()
 
@@ -436,7 +512,6 @@ data, details = readFile(0)
 status_text = updateStatusLine(f"loaded map: level{id}.h")
 yTiles = int(details[1])
 xTiles = int(details[2])
-maxTiles = 3
 screenyDim = 1280
 screenxDim = 1900
 
@@ -564,8 +639,8 @@ while running:
             if event.button == 4:
                 if bigMap:
                     SMALL_TILE_SIZE = SMALL_TILE_SIZE + 1
-                    if SMALL_TILE_SIZE > 5:
-                        SMALL_TILE_SIZE = 5
+                    if SMALL_TILE_SIZE > 10:
+                        SMALL_TILE_SIZE = 10
                 cursorState = cursorState + 1
                 if cursorState > maxTiles:
                     cursorState = 0
