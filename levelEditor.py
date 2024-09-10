@@ -54,35 +54,11 @@ SAND = 1
 GRASS = 2
 STONE = 3
 
-def add_river(terrain_map, start_pos, width, height):
-    """Add a river to the terrain map from the start position."""
-    x, y = start_pos
-    river_width = random.randint(1,2)  # Width of the river
-    length = random.randint(30, 100)  # Random length of the river
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # Directions: down, right, up, left
-
-    for _ in range(length):
-        if 0 <= x < width and 0 <= y < height:
-            # Set the current cell and surrounding cells to water
-            for dx in range(-river_width, river_width + 1):
-                for dy in range(-river_width, river_width + 1):
-                    if 0 <= x + dx < width and 0 <= y + dy < height:
-                        distance = np.sqrt(dx**2 + dy**2)
-                        if distance <= river_width:
-                            terrain_map[y + dy, x + dx] = WATER
-            
-            # Randomly choose next direction to move
-            direction = random.choice(directions)
-            x += direction[0]
-            y += direction[1]
-    
-    return terrain_map
-
-def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5):
-    """Generate a terrain map with given dimensions using Perlin noise and rivers."""
-    
+def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5, num_buildings=10):
+    """Generate a terrain map with given dimensions using Perlin noise and add buildings."""
     terrain_map = np.zeros((height, width), dtype=np.int32)
-    #print("generating terrain")
+    num_buildings=random.randint(0,4)
+    num_rivers=random.randint(0,4)
     # Generate terrain using Perlin noise
     base = random.randint(0, 100000) * 2
     for y in range(height):
@@ -104,16 +80,66 @@ def create_terrain_map(width, height, scale=10.0, octaves=6, persistence=0.5, la
                 terrain_map[y, x] = SAND
             elif normalized_value < 0.6:
                 terrain_map[y, x] = GRASS
-            else:
-                terrain_map[y, x] = STONE
+            #else:
+            #    terrain_map[y, x] = STONE
     
     # Add rivers to the terrain map
-    #print("generating waterways")
     for _ in range(num_rivers):
         start_pos = (random.randint(0, width-1), random.randint(0, height-1))
         terrain_map = add_river(terrain_map, start_pos, width, height)
+    
+    # Add buildings to the terrain map
+    for _ in range(num_buildings):
+        while True:
+            building_width = random.randint(5, 20)
+            building_height = random.randint(5, 20)
+            start_x = random.randint(0, width - building_width)
+            start_y = random.randint(0, height - building_height)
+            if can_place_building(terrain_map, start_x, start_y, building_width, building_height):
+                terrain_map = add_building(terrain_map, start_x, start_y, building_width, building_height, width, height)
+                break
 
     return terrain_map
+
+def add_river(terrain_map, start_pos, width, height):
+    """Add a river to the terrain map from the start position."""
+    x, y = start_pos
+    river_width = 3
+    length = random.randint(30, 100)
+    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+    for _ in range(length):
+        if 0 <= x < width and 0 <= y < height:
+            for dx in range(-river_width, river_width + 1):
+                for dy in range(-river_width, river_width + 1):
+                    if 0 <= x + dx < width and 0 <= y + dy < height:
+                        distance = np.sqrt(dx**2 + dy**2)
+                        if distance <= river_width:
+                            terrain_map[y + dy, x + dx] = WATER
+
+            direction = random.choice(directions)
+            x += direction[0]
+            y += direction[1]
+
+    return terrain_map
+
+def add_building(terrain_map, start_x, start_y, width, height, terrain_width, terrain_height):
+    """Add a rectangular building to the terrain map."""
+    for y in range(start_y, min(start_y + height, terrain_height)):
+        for x in range(start_x, min(start_x + width, terrain_width)):
+            terrain_map[y, x] = STONE
+
+    return terrain_map
+
+def can_place_building(terrain_map, start_x, start_y, width, height):
+    """Check if a building can be placed at the specified location without overlapping water."""
+    for y in range(start_y, min(start_y + height, terrain_map.shape[0])):
+        for x in range(start_x, min(start_x + width, terrain_map.shape[1])):
+            if terrain_map[y, x] == WATER:
+                return False
+    return True
+
+
 def create_random_map(width, height):
     """Generate a random tilemap with given dimensions."""
     #return np.random.randint(low=0, high=2 + 1, size=(height, width), dtype=np.int32)
@@ -239,9 +265,9 @@ def render_tilemap(tilemap, bigMap, id):
         screen.blit(text_surface2, (150, screenyDim - 50))
         screen.blit(status_text, (0, screenyDim - 100))
 
-        pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), 6)
+        pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), TILE_SIZE/4 + 1)
         cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
-        pygame.draw.circle(screen, cursor_color, pygame.mouse.get_pos(), 4)
+        pygame.draw.circle(screen, cursor_color, pygame.mouse.get_pos(), TILE_SIZE/4)
 
     else:
         # Large map rendering
