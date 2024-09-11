@@ -53,11 +53,6 @@ statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 id = 0
-#random terrain generation function
-#adjust octaves, persistence, lacunarity for different results
-import numpy as np
-import random
-from noise import snoise2
 
 
 
@@ -74,10 +69,48 @@ def prompt_for_details():
         details['persistence'] = float(simpledialog.askstring("Configuration", "Persistence [0.5] (float):").strip())
         return details
 
-import numpy as np
-import random
-from noise import snoise2
 
+def load_tiles(spritemap_path, tile_size):
+    """
+    Load tiles from a spritemap image.
+
+    :param spritemap_path: Path to the spritemap image file.
+    :param tile_size: Tuple (width, height) of each tile in the spritemap.
+    :return: A list of pygame.Surface objects representing each tile.
+    """
+    
+    spritemap = pygame.image.load(spritemap_path).convert_alpha()  # Load the spritemap with transparency support
+    tile_width, tile_height = tile_size
+
+    # Get dimensions of the spritemap
+    spritemap_width, spritemap_height = spritemap.get_size()
+
+    # Number of tiles per row and column
+    num_tiles_x = spritemap_width // tile_width
+    num_tiles_y = spritemap_height // tile_height
+
+    # List to hold all tile surfaces
+    tiles = []
+
+    for y in range(num_tiles_y):
+        for x in range(num_tiles_x):
+            # Define the rect for the current tile
+            tile_rect = pygame.Rect(x * tile_width, y * tile_height, tile_width, tile_height)
+
+            # Create a new surface for the tile
+            tile_surface = pygame.Surface((tile_width, tile_height), pygame.SRCALPHA)
+            tile_surface.blit(spritemap, (0, 0), tile_rect)
+            
+            # Add the tile surface to the list
+            tiles.append(tile_surface)
+
+    return tiles
+
+# Example usage
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+tile_size = (32, 32)
+tiles = load_tiles('./tilemap.png', tile_size)
 
 def generate_maze(width, height):
     # Ensure dimensions are even for the maze generation
@@ -198,7 +231,7 @@ def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persisten
     if settings["mazes"]:
         add_maze_to_terrain(terrain_map, maze)
     
-    print(terrain_map)
+    #print(terrain_map)
     return terrain_map
 
 def add_river(terrain_map, start_pos, width, height, river_width):
@@ -335,7 +368,8 @@ def generate_large_tilemap(small_tilemaps):
 
     return large_tilemap
 
-def render_tilemap(tilemap, bigMap, id):
+#main map renderer
+def render_tilemap(tilemap, tiles, bigMap, id):
     if not bigMap:
         TILE_SIZE = 32
         pygame.mouse.set_visible(False)
@@ -353,10 +387,20 @@ def render_tilemap(tilemap, bigMap, id):
             for x, item in enumerate(row):
                 tilePos = (x * TILE_SIZE, y * TILE_SIZE)
                 color = TILE_COLORS.get(item, (255, 255, 255))  # Default to white if item is unknown
-                pygame.draw.rect(screen, color, pygame.Rect(tilePos[0], tilePos[1], TILE_SIZE, TILE_SIZE))
+                #pygame.draw.rect(screen, color, pygame.Rect(tilePos[0], tilePos[1], TILE_SIZE, TILE_SIZE))
                 pygame.draw.rect(screen, (128, 128, 128), pygame.Rect(tilePos[0], tilePos[1], TILE_SIZE, TILE_SIZE),1)
+                tile_rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            
+                # Draw the tile rectangle
+                #pygame.draw.rect(screen, (255, 255, 255), tile_rect)  # White rectangle for the tile background
 
-
+                # Draw the tile sprite on top of the rectangle
+                #tile_sprite_rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
+                tile_surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
+                if 0 <= item < len(tiles):
+                    tile_surface = tiles[item]
+                    screen.blit(tile_surface, (x * tile_size[0], y * tile_size[1]))
+                
         # Display status texts
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", True, (255,255,255))
@@ -376,7 +420,12 @@ def render_tilemap(tilemap, bigMap, id):
             for x in range(tilemap.shape[1]):
                 tile_id = tilemap[y, x]
                 color = TILE_COLORS.get(tile_id, (255, 255, 255))  # Default to white if tile_id is unknown
-                pygame.draw.rect(screen, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+                #pygame.draw.rect(screen, color, pygame.Rect(x * SMALL_TILE_SIZE, y * SMALL_TILE_SIZE, SMALL_TILE_SIZE, SMALL_TILE_SIZE))
+                tile_surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
+                if 0 <= tile_id < len(tiles):
+                    tile_surface = tiles[tile_id]
+                    tile_surface = pygame.transform.scale(tile_surface, (SMALL_TILE_SIZE,SMALL_TILE_SIZE))
+                    screen.blit(tile_surface, (x * SMALL_TILE_SIZE, y * SMALL_TILE_SIZE))
         tilemaps = parse_tilemap_data('levels.h')
         small_tilemaps = create_small_tilemaps(tilemaps)
         num_tiles = len(small_tilemaps)
@@ -387,12 +436,15 @@ def render_tilemap(tilemap, bigMap, id):
             tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
             
             if idx == id:
+                
                 index_text = small_my_font.render(str(idx), True, (255, 0, 0))
                 pygame.draw.rect(screen, (255, 0, 0), tile_rect, 2)  # Draw rectangle around the tilemap
             else:
-                index_text = small_my_font.render(str(idx), True, (255, 255, 255))
+                index_text = small_my_font.render(str(idx), True, (255, 0, 0))
                 pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
+            
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
+
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to enter/exit map", True, (255,255,255))
         text_surface2b = my_font.render("MWHEEL scales up/down",True,(255,255,255))
@@ -413,7 +465,7 @@ def render_map(bigMap,id):
     tilemaps = parse_tilemap_data('levels.h')
     small_tilemaps = create_small_tilemaps(tilemaps)
     large_tilemap = generate_large_tilemap(small_tilemaps)
-    render_tilemap(large_tilemap, bigMap, id)
+    render_tilemap(large_tilemap, spritemap, bigMap, id)
 
 def concat_and_pack():
     filenames = glob.glob('levels/*.h')
@@ -507,16 +559,17 @@ def readFile(id):
 pygame.init()
 pygame.font.init()
 my_font = pygame.font.SysFont('Arial', 20)
-small_my_font = pygame.font.SysFont('Arial', 10)
+small_my_font = pygame.font.SysFont('Arial', 12)
 data, details = readFile(0)
 status_text = updateStatusLine(f"loaded map: level{id}.h")
 yTiles = int(details[1])
 xTiles = int(details[2])
 screenyDim = 1280
 screenxDim = 1900
-
 screen = pygame.display.set_mode((screenxDim, screenyDim),pygame.RESIZABLE)
 Window.from_display_module().maximize()
+sprite_size = (32, 32)
+spritemap = load_tiles("./tilemap.png",(32,32))
 
 
 # Main loop
