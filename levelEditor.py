@@ -23,9 +23,9 @@ SAND = 1
 GRASS = 2
 STONE = 3
 LAVA = 4
-
+BLANK = 5
 #highest tile type value, don't ask why (because it's not a list, duh)
-maxTiles = 4
+maxTiles = 5
 
 # Define colors for each tile ID
 TILE_COLORS = {
@@ -34,6 +34,7 @@ TILE_COLORS = {
     GRASS: (0, 96, 0),
     STONE: (96, 96, 96),
     LAVA: (128,0,0),
+    BLANK: (64,64,64),
     # Add more colors as needed
 }
 
@@ -60,10 +61,17 @@ id = 0
 def prompt_for_details():
         details = {}
         details['buildings'] = messagebox.askyesno("Configuration", "Include buildings? (yes/no)")
-        details['mazes'] = messagebox.askyesno("Configuration", "Mazes (yes/no)")
-        details['building_count'] = int(simpledialog.askstring("Configuration", "Max buildings/map [3] (integer):").strip())
+        if details['buildings']:
+            details['mazes'] = messagebox.askyesno("Configuration", "Mazes (yes/no)")
+        elif not details['buildings']:
+            details['mazes'] = False
+        if details['buildings']:
+            details['building_count'] = int(simpledialog.askstring("Configuration", "Max buildings/map [3] (integer):").strip())
         details['rivers'] = messagebox.askyesno("Configuration", "Include rivers? (yes/no)")
-        details['river_width'] = float(simpledialog.askstring("Configuration", "River width [1] (integer):").strip())
+        if details['rivers']:
+            details['river_width'] = float(simpledialog.askstring("Configuration", "River width [1] (integer):").strip())
+        elif not details['rivers']:
+            details['river_width'] = 0.0
         details['terrain_scale'] = float(simpledialog.askstring("Configuration", "Terrain scale [10.0] (float):").strip())
         details['octaves'] = int(simpledialog.askstring("Configuration", "Octaves [6] (integer):").strip())
         details['persistence'] = float(simpledialog.askstring("Configuration", "Persistence [0.5] (float):").strip())
@@ -397,22 +405,33 @@ def render_tilemap(tilemap, tiles, bigMap, id):
                 # Draw the tile sprite on top of the rectangle
                 #tile_sprite_rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
                 tile_surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
+                cursor_tile = pygame.Surface((TILE_SIZE,TILE_SIZE))
+                
                 if 0 <= item < len(tiles):
                     tile_surface = tiles[item]
+                    cursor_tile = tiles[cursorState]
                     screen.blit(tile_surface, (x * tile_size[0], y * tile_size[1]))
+                    cursor_tile = pygame.transform.scale(cursor_tile, (TILE_SIZE*2,TILE_SIZE*2))
+                    screen.blit(cursor_tile, (0, screenyDim - TILE_SIZE))
+                    
                 
         # Display status texts
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", True, (255,255,255))
+        text_surface3 = my_font.render("current tile", True, (255,255,255))
         
-        screen.blit(text_surface, (0, screenyDim - 50))
-        screen.blit(text_surface2, (150, screenyDim - 50))
-        screen.blit(status_text, (0, screenyDim - 100))
-
+        screen.blit(text_surface, (0, screenyDim - 75))
+        screen.blit(text_surface2, (150, screenyDim - 75))
+        screen.blit(status_text, (0, screenyDim - 125))
+        screen.blit(text_surface3, (TILE_SIZE*2, screenyDim))
+        display_tile = pygame.Surface((TILE_SIZE,TILE_SIZE))
+        display_tile = tiles[cursorState]
+        
         pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), TILE_SIZE/4 + 1)
         cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
         pygame.draw.circle(screen, cursor_color, pygame.mouse.get_pos(), TILE_SIZE/4)
-
+        display_tile = pygame.transform.scale(display_tile, (TILE_SIZE/2,TILE_SIZE/2))
+        screen.blit(display_tile, ((pygame.mouse.get_pos()[0] - TILE_SIZE/4),(pygame.mouse.get_pos()[1] - TILE_SIZE/4)))
     else:
         # Large map rendering
         screen.fill(background_color)  # Clear the screen
