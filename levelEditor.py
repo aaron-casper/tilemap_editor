@@ -13,16 +13,19 @@ import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
 
-
+#CONST dimensions for sprite and tile size
+DIMENSION_X = 16
+DIMENSION_Y = 16
 #-------
 #tile defintions
 #-------
 # Constants for tile/terrain types
-WATER = 0
+WATER = 48
 SAND = 1
-GRASS = 2
-STONE = 3
-LAVA = 4
+GRASS = 6
+STONE = 192
+#^ this is all that is required for the terrain generator
+WOOD = 234
 MAGIC = 5
 DIRT = 6
 RIVER = 7
@@ -33,7 +36,7 @@ TILE_COLORS = {
     SAND: (96, 64, 0),
     GRASS: (0, 96, 0),
     STONE: (96, 96, 96),
-    LAVA: (128,0,0),
+    WOOD: (64,32,0),
     MAGIC: (64,64,64),
     DIRT: (128,64,0),
     RIVER: (0,0,96),
@@ -44,7 +47,7 @@ TILE_COLORS = {
 COLUMNS = 10 #number of columns of tilemaps to make big map
 NUM_MAPS = 100 #total number of maps
 
-TILE_SIZE = 32
+TILE_SIZE = DIMENSION_X
 SMALL_TILE_SIZE = 2
 TILEMAP_WIDTH = 40
 TILEMAP_HEIGHT = 32
@@ -58,7 +61,8 @@ statusLimit = 100
 id = 0
 maxTiles = 0
 #SPRITE DIMENSIONS IN PACKED SPRITESHEET, IMPORTANT
-tile_size = (32, 32)
+tile_size = (DIMENSION_X, DIMENSION_Y)
+tile_file = ('./Tileset.png')
 
 
 
@@ -121,8 +125,8 @@ def load_tiles(spritemap_path, tile_size):
 # Example usage
 pygame.init()
 screen = pygame.display.set_mode((800, 600))
-
-tiles = load_tiles('./tilemap.png', tile_size)
+tile_size = (DIMENSION_X, DIMENSION_Y)
+tiles = load_tiles(tile_file, tile_size)
 maxTiles = len(tiles) - 1
 
 def generate_maze(width, height):
@@ -133,7 +137,7 @@ def generate_maze(width, height):
         height += 1
 
     # Create a grid filled with stone tiles (non-passable) using NumPy array
-    maze = np.full((height, width), STONE, dtype=int)
+    maze = np.full((height, width), WOOD, dtype=int)
     
     # Define directions for moving in the maze (right, down, left, up)
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
@@ -148,7 +152,7 @@ def generate_maze(width, height):
         random.shuffle(directions)
         for direction in directions:
             nx, ny = cx + direction[0] * 2, cy + direction[1] * 2
-            if in_bounds(nx, ny) and maze[ny, nx] == STONE:
+            if in_bounds(nx, ny) and maze[ny, nx] == WOOD:
                 # Carve the wall between the current cell and the next cell
                 maze[cy + direction[1], cx + direction[0]] = GRASS
                 carve_maze(nx, ny)
@@ -173,7 +177,7 @@ def add_maze_to_terrain(terrain_map, maze):
             if 0 <= y + offset_y < t_height and 0 <= x + offset_x < t_width:
                 # Only place maze tiles on stone tiles in the terrain map
                 if maze[y, x] == GRASS:  # Maze paths
-                    if terrain_map[y + offset_y, x + offset_x] == STONE:
+                    if terrain_map[y + offset_y, x + offset_x] == WOOD:
                         terrain_map[y + offset_y, x + offset_x] = GRASS
 
 def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5, num_buildings=10):
@@ -219,11 +223,9 @@ def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persisten
                 terrain_map[y, x] = SAND
             elif normalized_value < 0.6:
                 terrain_map[y, x] = GRASS
-            elif normalized_value < 0.8:
-                terrain_map[y, x] = STONE
             else:
-                terrain_map[y,x] = LAVA
-    
+                terrain_map[y, x] = STONE
+
     # Add rivers to the terrain map
     for _ in range(num_rivers):
         start_pos = (random.randint(0, width-1), random.randint(0, height-1))
@@ -272,7 +274,7 @@ def add_building(terrain_map, start_x, start_y, width, height, terrain_width, te
     """Add a rectangular building to the terrain map."""
     for y in range(start_y, min(start_y + height, terrain_height)):
         for x in range(start_x, min(start_x + width, terrain_width)):
-            terrain_map[y, x] = STONE
+            terrain_map[y, x] = WOOD
 
     return terrain_map
 
@@ -384,7 +386,7 @@ def generate_large_tilemap(small_tilemaps):
 #main map renderer
 def render_tilemap(tilemap, tiles, bigMap, id):
     if not bigMap:
-        TILE_SIZE = 32
+        TILE_SIZE = DIMENSION_X
         pygame.mouse.set_visible(False)
     elif bigMap:
         TILE_SIZE = SMALL_TILE_SIZE
@@ -415,20 +417,21 @@ def render_tilemap(tilemap, tiles, bigMap, id):
                 if 0 <= item < len(tiles):
                     tile_surface = tiles[item]
                     cursor_tile = tiles[cursorState]
+                    tile_surface = pygame.transform.scale(tile_surface, tile_size)
                     screen.blit(tile_surface, (x * tile_size[0], y * tile_size[1]))
-                    cursor_tile = pygame.transform.scale(cursor_tile, (TILE_SIZE*2,TILE_SIZE*2))
-                    screen.blit(cursor_tile, (0, screenyDim - TILE_SIZE))
+                    cursor_tile = pygame.transform.scale(cursor_tile, (64,64))
+                    screen.blit(cursor_tile, (0, screenyDim - 64))
                     
                 
         # Display status texts
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", True, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | pgup/pgdn to zoom in/out | - to switch to world view", True, (255,255,255))
         text_surface3 = my_font.render("current tile: " + str(cursorState) , True, (255,255,255))
         
         screen.blit(text_surface, (0, screenyDim - 75))
         screen.blit(text_surface2, (150, screenyDim - 75))
         screen.blit(status_text, (0, screenyDim - 125))
-        screen.blit(text_surface3, (TILE_SIZE*2, screenyDim))
+        screen.blit(text_surface3, (68, screenyDim))
         display_tile = pygame.Surface((TILE_SIZE,TILE_SIZE))
         display_tile = tiles[cursorState]
         
@@ -470,7 +473,7 @@ def render_tilemap(tilemap, tiles, bigMap, id):
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
 
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | +/- to enter/exit map", True, (255,255,255))
+        text_surface2 = my_font.render("F2/F3 select map | + to switch to map view | mousewheel zooms in/out", True, (255,255,255))
         text_surface2b = my_font.render("MWHEEL scales up/down",True,(255,255,255))
         text_surface3 = my_font.render("F11 go to map [id]",True,(255,255,255))
         text_surface4 = my_font.render("F12 randomize maps",True,(255,255,255))
@@ -592,8 +595,8 @@ screenyDim = 1280
 screenxDim = 1900
 screen = pygame.display.set_mode((screenxDim, screenyDim),pygame.RESIZABLE)
 Window.from_display_module().maximize()
-sprite_size = (32, 32)
-spritemap = load_tiles("./tilemap.png",(32,32))
+sprite_size = (DIMENSION_X, DIMENSION_Y)
+spritemap = load_tiles(tile_file,tile_size)
 
 
 # Main loop
@@ -633,6 +636,24 @@ while running:
                 writeToFile(id)
                 status_text = updateStatusLine("saved map: level" + str(id) + ".h, exiting editor")
                 running = False
+            if event.scancode == 75: #pgup
+                if not bigMap:
+                    DIMENSION_X = DIMENSION_X + 1
+                    DIMENSION_Y = DIMENSION_Y + 1
+                    if DIMENSION_Y > 64:
+                        DIMENSION_Y = 64
+                    tile_size = (DIMENSION_X, DIMENSION_Y)
+                    tiles = load_tiles(tile_file, tile_size)
+            
+            if event.scancode == 78: #pgdn
+                if not bigMap:
+                    DIMENSION_X = DIMENSION_X - 1
+                    DIMENSION_Y = DIMENSION_Y - 1
+                    if DIMENSION_Y < 16:
+                        DIMENSION_Y = 16
+                    tile_size = (DIMENSION_X, DIMENSION_Y)
+                    tiles = load_tiles(tile_file, tile_size)
+
             if event.scancode == 62:
 #                print("zip functionality disabled")
                 try:
@@ -712,20 +733,27 @@ while running:
             #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                 status_text = updateStatusLine("cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 statusTimeout = 0
+        
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 4:
                 if bigMap:
                     SMALL_TILE_SIZE = SMALL_TILE_SIZE + 1
                     if SMALL_TILE_SIZE > 10:
                         SMALL_TILE_SIZE = 10
+
+    
                 cursorState = cursorState + 1
                 if cursorState > maxTiles:
                     cursorState = 0
+            
             if event.button == 5:
                 if bigMap:
                     SMALL_TILE_SIZE = SMALL_TILE_SIZE - 1
                     if SMALL_TILE_SIZE < 1:
                         SMALL_TILE_SIZE = 1
+
+    
+
                 cursorState = cursorState - 1
                 if cursorState < 0:
                     cursorState = maxTiles
