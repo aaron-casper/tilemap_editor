@@ -26,16 +26,6 @@ LAVA = 4
 MAGIC = 5
 DIRT = 6
 RIVER = 7
-DARKWATER = 8
-DARKSAND = 9
-DARKGRASS = 10
-DARKSTONE = 11
-DARKLAVA = 12
-DARKMAGIC = 13
-DARKDIRT = 14
-DARKRIVER = 15
-#highest tile type value, don't ask why (because it's not a list, duh)
-maxTiles = 15
 
 # Define failback colors for each tile ID
 TILE_COLORS = {
@@ -47,15 +37,6 @@ TILE_COLORS = {
     MAGIC: (64,64,64),
     DIRT: (128,64,0),
     RIVER: (0,0,96),
-    DARKWATER: (0, 0, 128),
-    DARKSAND: (96, 64, 0),
-    DARKGRASS: (0, 96, 0),
-    DARKSTONE: (96, 96, 96),
-    DARKLAVA: (128,0,0),
-    DARKMAGIC: (64,64,64),
-    DARKDIRT: (128,64,0),
-    DARKRIVER: (0,0,96),
-
     # Add more colors as needed
 }
 
@@ -75,7 +56,9 @@ statusString = "test"
 statusTimeout = 0
 statusLimit = 100
 id = 0
-
+maxTiles = 0
+#SPRITE DIMENSIONS IN PACKED SPRITESHEET, IMPORTANT
+tile_size = (32, 32)
 
 
 
@@ -138,8 +121,9 @@ def load_tiles(spritemap_path, tile_size):
 # Example usage
 pygame.init()
 screen = pygame.display.set_mode((800, 600))
-tile_size = (32, 32)
+
 tiles = load_tiles('./tilemap.png', tile_size)
+maxTiles = len(tiles) - 1
 
 def generate_maze(width, height):
     # Ensure dimensions are even for the maze generation
@@ -439,7 +423,7 @@ def render_tilemap(tilemap, tiles, bigMap, id):
         # Display status texts
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
         text_surface2 = my_font.render("F2/F3 select map | +/- to zoom in/out", True, (255,255,255))
-        text_surface3 = my_font.render("current tile", True, (255,255,255))
+        text_surface3 = my_font.render("current tile: " + str(cursorState) , True, (255,255,255))
         
         screen.blit(text_surface, (0, screenyDim - 75))
         screen.blit(text_surface2, (150, screenyDim - 75))
