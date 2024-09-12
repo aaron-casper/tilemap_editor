@@ -419,13 +419,16 @@ def render_tilemap(tilemap, tiles, bigMap, id):
                     cursor_tile = tiles[cursorState]
                     tile_surface = pygame.transform.scale(tile_surface, tile_size)
                     screen.blit(tile_surface, (x * tile_size[0], y * tile_size[1]))
-                    cursor_tile = pygame.transform.scale(cursor_tile, (64,64))
-                    screen.blit(cursor_tile, (0, screenyDim - 64))
                     
-                
+        
+        pygame.draw.rect(screen, (128,128,128), pygame.Rect(0, screenyDim - 151, 5000, screenyDim - 149))                    
+        pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, screenyDim - 150, 5000, 5000))            
+        cursor_tile = pygame.transform.scale(cursor_tile, (128,128))
+        screen.blit(cursor_tile, (screenxDim - 64, screenyDim - 64))
         # Display status texts
+        
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | pgup/pgdn to zoom in/out | - to switch to world view", True, (255,255,255))
+        text_surface2 = my_font.render("arrow keys select map | pgup/pgdn to zoom in/out | - to switch to world view", True, (255,255,255))
         text_surface3 = my_font.render("current tile: " + str(cursorState) , True, (255,255,255))
         
         screen.blit(text_surface, (0, screenyDim - 75))
@@ -435,7 +438,7 @@ def render_tilemap(tilemap, tiles, bigMap, id):
         display_tile = pygame.Surface((TILE_SIZE,TILE_SIZE))
         display_tile = tiles[cursorState]
         
-        pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), TILE_SIZE/4 + 1)
+        pygame.draw.circle(screen, (255, 0, 0), pygame.mouse.get_pos(), int(tile_size[0]/2.5))
         cursor_color = TILE_COLORS.get(cursorState, (255, 255, 255))  # Default to white if cursorState is unknown
         pygame.draw.circle(screen, cursor_color, pygame.mouse.get_pos(), TILE_SIZE/4)
         display_tile = pygame.transform.scale(display_tile, (TILE_SIZE/2,TILE_SIZE/2))
@@ -471,20 +474,23 @@ def render_tilemap(tilemap, tiles, bigMap, id):
                 pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
             
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
-
+        pygame.draw.rect(screen, (128,128,128), pygame.Rect(0, screenyDim - 151, 5000, screenyDim - 149))                    
+        pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, screenyDim - 150, 5000, 5000))            
+        # Display status texts
+        
         text_surface = my_font.render("map: " + str(id), True, (255,255,255))
-        text_surface2 = my_font.render("F2/F3 select map | + to switch to map view | mousewheel zooms in/out", True, (255,255,255))
-        text_surface2b = my_font.render("MWHEEL scales up/down",True,(255,255,255))
+        text_surface2 = my_font.render("arrow keys select map | + to switch to map view | mousewheel zooms in/out", True, (255,255,255))
+        
         text_surface3 = my_font.render("F11 go to map [id]",True,(255,255,255))
         text_surface4 = my_font.render("F12 randomize maps",True,(255,255,255))
         #text_surface5 = my_font.render(statusString, True, (255,255,255))
         
-        screen.blit(text_surface, (screenxDim - 100, screenyDim - 50))
-        screen.blit(text_surface2, (screenxDim - 300, screenyDim - 100))
-        screen.blit(text_surface2b, (screenxDim - 300, screenyDim - 75))
-        screen.blit(text_surface3, (screenxDim - 300, screenyDim - 150))
-        screen.blit(text_surface4, (screenxDim - 300, screenyDim - 200))
-        screen.blit(status_text, (screenxDim - 300, screenyDim - 250))
+        screen.blit(text_surface, (0, screenyDim))
+        screen.blit(text_surface2, (0, screenyDim - 30))
+        
+        screen.blit(text_surface3, (0, screenyDim - 90))
+        screen.blit(text_surface4, (0, screenyDim - 120))
+        screen.blit(status_text, (0, screenyDim - 150))
         
     pygame.display.flip()
 
@@ -607,7 +613,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYUP:
-            #print(event.scancode)
+           # print(event.scancode)
             if event.key == pygame.K_F11:
                 writeToFile(id) #save map before loading a new one
                 mapSearch = prompt_for_integer()
@@ -632,6 +638,8 @@ while running:
             if event.key == pygame.K_F7 or event.scancode == 46 or event.scancode == 87:
                 #print("Zoom in")
                 bigMap = False
+
+
             if event.scancode == 41:
                 writeToFile(id)
                 status_text = updateStatusLine("saved map: level" + str(id) + ".h, exiting editor")
@@ -642,6 +650,8 @@ while running:
                     DIMENSION_Y = DIMENSION_Y + 1
                     if DIMENSION_Y > 64:
                         DIMENSION_Y = 64
+                    if DIMENSION_X > 64:
+                        DIMENSION_X = 64
                     tile_size = (DIMENSION_X, DIMENSION_Y)
                     tiles = load_tiles(tile_file, tile_size)
             
@@ -651,6 +661,8 @@ while running:
                     DIMENSION_Y = DIMENSION_Y - 1
                     if DIMENSION_Y < 16:
                         DIMENSION_Y = 16
+                    if DIMENSION_X < 16:
+                        DIMENSION_X = 16
                     tile_size = (DIMENSION_X, DIMENSION_Y)
                     tiles = load_tiles(tile_file, tile_size)
 
@@ -685,8 +697,38 @@ while running:
                     messagebox.showinfo("PROCESSING","Done generating maps!")
                 else:
                     break
-            if event.scancode == 60:
-                #print("next map")
+             #arrow keys
+            if event.scancode == 82:
+            #up
+                id2 = id
+                id = id - COLUMNS
+                if id < 0:
+                    id = id2
+                data = readFile(id)
+                data = data[0]
+                statusTimeout = 0
+                status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
+                #writeToFile(id)
+                if newLevel == True:
+                    concat_and_pack()
+                    newLevel = False
+            if event.scancode == 81:
+            #DOWN
+                writeToFile(id)
+                id2 = id
+                id = id + COLUMNS
+                if id > NUM_MAPS:
+                    id = id2     
+                data = readFile(id)
+                data = data[0]
+                statusTimeout = 0
+                status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
+                #writeToFile(id)
+                if newLevel == True:
+                    concat_and_pack()
+                    newLevel = False
+            if event.scancode == 79:
+                #RIGHT
                 writeToFile(id)
                 #remove_all_h_files("./")
                 id = id + 1
@@ -694,13 +736,13 @@ while running:
                 data = data[0]
                 statusTimeout = 0
                 status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
-                writeToFile(id)
+                #writeToFile(id)
                 #print(newLevel)
                 if newLevel == True:
                     concat_and_pack()
                     newLevel = False
-            if event.scancode == 59:
-                #print("prev map")
+            if event.scancode == 80:
+                #LEFT
                 writeToFile(id)
                 #remove_all_h_files("./")
                 id = id - 1
@@ -763,8 +805,8 @@ while running:
                     break
                 mousePosition = pygame.mouse.get_pos()
                 try:
-                    tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
-                    tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+                    tileMapPosition_x = int(mousePosition[0] / DIMENSION_X)
+                    tileMapPosition_y = int(mousePosition[1] / DIMENSION_Y)
                 #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                     #print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     data[tileMapPosition_y][tileMapPosition_x] = cursorState
