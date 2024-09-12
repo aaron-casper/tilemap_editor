@@ -23,18 +23,39 @@ SAND = 1
 GRASS = 2
 STONE = 3
 LAVA = 4
-BLANK = 5
+MAGIC = 5
+DIRT = 6
+RIVER = 7
+DARKWATER = 8
+DARKSAND = 9
+DARKGRASS = 10
+DARKSTONE = 11
+DARKLAVA = 12
+DARKMAGIC = 13
+DARKDIRT = 14
+DARKRIVER = 15
 #highest tile type value, don't ask why (because it's not a list, duh)
-maxTiles = 5
+maxTiles = 15
 
-# Define colors for each tile ID
+# Define failback colors for each tile ID
 TILE_COLORS = {
     WATER: (0, 0, 128),
     SAND: (96, 64, 0),
     GRASS: (0, 96, 0),
     STONE: (96, 96, 96),
     LAVA: (128,0,0),
-    BLANK: (64,64,64),
+    MAGIC: (64,64,64),
+    DIRT: (128,64,0),
+    RIVER: (0,0,96),
+    DARKWATER: (0, 0, 128),
+    DARKSAND: (96, 64, 0),
+    DARKGRASS: (0, 96, 0),
+    DARKSTONE: (96, 96, 96),
+    DARKLAVA: (128,0,0),
+    DARKMAGIC: (64,64,64),
+    DARKDIRT: (128,64,0),
+    DARKRIVER: (0,0,96),
+
     # Add more colors as needed
 }
 
