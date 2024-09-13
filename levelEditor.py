@@ -28,11 +28,11 @@ DIMENSION_Y = 16
 #tile defintions
 #-------
 # Constants for tile/terrain types, need to be identified in spritemap
-WATER = 48
-SAND = 768
-GRASS = 0
-STONE = 192
-WOOD = 683
+WATER = 62
+SAND = 527
+GRASS = 2
+STONE = 167
+WALL = 1273
 #^ this is all that is required for the terrain generator
 
 # Define failback colors for each tile ID
@@ -41,7 +41,7 @@ TILE_COLORS = {
     SAND: (96, 64, 0),
     GRASS: (0, 96, 0),
     STONE: (96, 96, 96),
-    WOOD: (64,32,0),
+    WALL: (64,32,0),
     # Add more colors as needed
 }
 
@@ -61,7 +61,7 @@ id = 0
 maxTiles = 0
 #SPRITE DIMENSIONS IN PACKED SPRITESHEET, IMPORTANT
 tile_size = (DIMENSION_X, DIMENSION_Y)
-tile_file = ('./Tileset.png')
+tile_file = ('./baseset.png')
 
 
 class TileSelector:
@@ -222,7 +222,7 @@ def generate_maze(width, height):
         height += 1
 
     # Create a grid filled with stone tiles (non-passable) using NumPy array
-    maze = np.full((height, width), WOOD, dtype=int)
+    maze = np.full((height, width), WALL, dtype=int)
     
     # Define directions for moving in the maze (right, down, left, up)
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
@@ -237,7 +237,7 @@ def generate_maze(width, height):
         random.shuffle(directions)
         for direction in directions:
             nx, ny = cx + direction[0] * 2, cy + direction[1] * 2
-            if in_bounds(nx, ny) and maze[ny, nx] == WOOD:
+            if in_bounds(nx, ny) and maze[ny, nx] == WALL:
                 # Carve the wall between the current cell and the next cell
                 maze[cy + direction[1], cx + direction[0]] = GRASS
                 carve_maze(nx, ny)
@@ -262,7 +262,7 @@ def add_maze_to_terrain(terrain_map, maze):
             if 0 <= y + offset_y < t_height and 0 <= x + offset_x < t_width:
                 # Only place maze tiles on stone tiles in the terrain map
                 if maze[y, x] == GRASS:  # Maze paths
-                    if terrain_map[y + offset_y, x + offset_x] == WOOD:
+                    if terrain_map[y + offset_y, x + offset_x] == WALL:
                         terrain_map[y + offset_y, x + offset_x] = GRASS
 
 def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persistence=0.5, lacunarity=2.0, num_rivers=5, num_buildings=10):
@@ -309,8 +309,9 @@ def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persisten
             elif normalized_value < 0.6:
                 terrain_map[y, x] = GRASS
             else:
-                tileChoice = random.randint(0,2)
-                terrain_map[y, x] = 192 + tileChoice
+                terrain_map[y,x] = STONE
+                #tileChoice = random.randint(0,2)
+                #terrain_map[y, x] = 192 + tileChoice
 
     # Add rivers to the terrain map
     for _ in range(num_rivers):
@@ -360,7 +361,7 @@ def add_building(terrain_map, start_x, start_y, width, height, terrain_width, te
     """Add a rectangular building to the terrain map."""
     for y in range(start_y, min(start_y + height, terrain_height)):
         for x in range(start_x, min(start_x + width, terrain_width)):
-            terrain_map[y, x] = WOOD
+            terrain_map[y, x] = WALL
 
     return terrain_map
 
