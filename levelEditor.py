@@ -13,22 +13,27 @@ import tkinter as tk
 from tkinter import simpledialog
 from tkinter import messagebox
 
+# Define constants for world size
+COLUMNS = 5 #number of columns of tilemaps to make big map
+NUM_MAPS = 25 #total number of maps
+
+#Define constants for map size
+TILEMAP_WIDTH = 40
+TILEMAP_HEIGHT = 32
+
 #CONST dimensions for sprite and tile size
 DIMENSION_X = 16
 DIMENSION_Y = 16
 #-------
 #tile defintions
 #-------
-# Constants for tile/terrain types
+# Constants for tile/terrain types, need to be identified in spritemap
 WATER = 48
 SAND = 1
 GRASS = 6
 STONE = 192
-#^ this is all that is required for the terrain generator
 WOOD = 234
-MAGIC = 5
-DIRT = 6
-RIVER = 7
+#^ this is all that is required for the terrain generator
 
 # Define failback colors for each tile ID
 TILE_COLORS = {
@@ -37,20 +42,14 @@ TILE_COLORS = {
     GRASS: (0, 96, 0),
     STONE: (96, 96, 96),
     WOOD: (64,32,0),
-    MAGIC: (64,64,64),
-    DIRT: (128,64,0),
-    RIVER: (0,0,96),
     # Add more colors as needed
 }
 
-# Define constants
-COLUMNS = 10 #number of columns of tilemaps to make big map
-NUM_MAPS = 100 #total number of maps
+
 
 TILE_SIZE = DIMENSION_X
 SMALL_TILE_SIZE = 2
-TILEMAP_WIDTH = 40
-TILEMAP_HEIGHT = 32
+
 
 # Global Variables
 bigMap = False
@@ -464,13 +463,14 @@ def render_tilemap(tilemap, tiles, bigMap, id):
             row = idx // num_columns
             col = idx % num_columns
             tile_rect = pygame.Rect(col * TILEMAP_WIDTH * TILE_SIZE, row * TILEMAP_HEIGHT * TILE_SIZE, TILEMAP_WIDTH * TILE_SIZE, TILEMAP_HEIGHT * TILE_SIZE)
-            
+            #print(tile_rect)
             if idx == id:
                 
-                index_text = small_my_font.render(str(idx), True, (255, 0, 0))
-                pygame.draw.rect(screen, (255, 0, 0), tile_rect, 2)  # Draw rectangle around the tilemap
+                index_text = my_font.render(str(idx), True, (0, 0, 0))
+
+                pygame.draw.rect(screen, (255, 0, 0), tile_rect, 3)  # Draw rectangle around the tilemap
             else:
-                index_text = small_my_font.render(str(idx), True, (255, 0, 0))
+                index_text = small_my_font.render(str(idx), True, (0, 0, 0))
                 pygame.draw.rect(screen, (128, 128, 128), tile_rect, 1)  # Draw rectangle around the tilemap
             
             screen.blit(index_text, (col * TILEMAP_WIDTH * TILE_SIZE + 5, row * TILEMAP_HEIGHT * TILE_SIZE + 5))
@@ -591,8 +591,8 @@ def readFile(id):
 # Initialize Pygame
 pygame.init()
 pygame.font.init()
-my_font = pygame.font.SysFont('Arial', 20)
-small_my_font = pygame.font.SysFont('Arial', 12)
+my_font = pygame.font.SysFont('rubikbold', 20)
+small_my_font = pygame.font.SysFont('rubikbold', 12)
 data, details = readFile(0)
 status_text = updateStatusLine(f"loaded map: level{id}.h")
 yTiles = int(details[1])
@@ -642,7 +642,7 @@ while running:
 
             if event.scancode == 41:
                 writeToFile(id)
-                status_text = updateStatusLine("saved map: level" + str(id) + ".h, exiting editor")
+                status_text = updateStatusLine("saved map: " + str(id) + ", exiting editor")
                 running = False
             if event.scancode == 75: #pgup
                 if not bigMap:
@@ -684,7 +684,7 @@ while running:
                 #remove_all_h_files("./")
             if event.scancode == 61:
                 statusTimeout = 0
-                status_text = updateStatusLine("saved map: level" + str(id) + ".h")
+                status_text = updateStatusLine("saved map: " + str(id))
                 writeToFile(id)
             if event.scancode == 69:
                 proceed = messagebox.askokcancel("PROCESSING","Generating maps may take a moment.\n\nClick OK to begin, or CANCEL to abort\n\nYou will be prompted for configuration details\nrecommended starting values are provided.\n\nYou will be notified when\nmap generation has completed.")
@@ -707,7 +707,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
+                status_text = updateStatusLine("saved map: " + str(id2) + ", loaded map: " + str(id))
                 #writeToFile(id)
                 if newLevel == True:
                     concat_and_pack()
@@ -722,12 +722,13 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
+                status_text = updateStatusLine("saved map: " + str(id2) + ", loaded map: " + str(id))
                 #writeToFile(id)
                 if newLevel == True:
                     concat_and_pack()
                     newLevel = False
             if event.scancode == 79:
+                id2 = id
                 #RIGHT
                 writeToFile(id)
                 #remove_all_h_files("./")
@@ -735,13 +736,14 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                status_text = updateStatusLine("saved map: " + str(id - 1) + ", loaded map: level" + str(id) + ".h")
+                status_text = updateStatusLine("saved map: " + str(id2) + ", loaded map: " + str(id))
                 #writeToFile(id)
                 #print(newLevel)
                 if newLevel == True:
                     concat_and_pack()
                     newLevel = False
             if event.scancode == 80:
+                id2 = id
                 #LEFT
                 writeToFile(id)
                 #remove_all_h_files("./")
@@ -751,7 +753,7 @@ while running:
                 data = readFile(id)
                 data = data[0]
                 statusTimeout = 0
-                status_text = updateStatusLine("saved map: " + str(id) + ", loaded map: level" + str(id) + ".h")
+                status_text = updateStatusLine("saved map: " + str(id2) + ", loaded map: " + str(id))
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not bigMap:
             mouse1Held = True
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and not bigMap:
