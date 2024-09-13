@@ -762,16 +762,16 @@ while running:
                 break
             mousePosition = pygame.mouse.get_pos()
             try:
-                tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
-                tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+                tileMapPosition_x = int(mousePosition[0] / DIMENSION_X)
+                tileMapPosition_y = int(mousePosition[1] / DIMENSION_Y)
             #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
 #                print(str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 data[tileMapPosition_y][tileMapPosition_x] = cursorState
                 status_text = updateStatusLine("placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 statusTimeout = 0
             except:
-                tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
-                tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+                tileMapPosition_x = int(mousePosition[0] / DIMENSION_X)
+                tileMapPosition_y = int(mousePosition[1] / DIMENSION_Y)
             #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                 status_text = updateStatusLine("cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                 statusTimeout = 0
@@ -800,6 +800,7 @@ while running:
                 if cursorState < 0:
                     cursorState = maxTiles
             #print(event.button)
+            #mouse1
             if event.button == 1:
                 if bigMap:
                     break
@@ -813,8 +814,8 @@ while running:
                     status_text = updateStatusLine("placed tile type (" + str(cursorState) + ") at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     statusTimeout = 0
                 except:
-                    tileMapPosition_x = int(mousePosition[0] / TILE_SIZE)
-                    tileMapPosition_y = int(mousePosition[1] / TILE_SIZE)
+                    tileMapPosition_x = int(mousePosition[0] / DIMENSION_X)
+                    tileMapPosition_y = int(mousePosition[1] / DIMENSION_Y)
                 #pygame.draw.rect(screen,"red",(tileMapPosition_x,tileMapPosition_y,x*TILE_SIZE+TILE_SIZE,y*TILE_SIZE+TILE_SIZE))
                     status_text = updateStatusLine("cannot place tile at : " + str(tileMapPosition_x) + ', ' + str(tileMapPosition_y))
                     statusTimeout = 0
