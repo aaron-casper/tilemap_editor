@@ -28,11 +28,11 @@ DIMENSION_Y = 16
 #tile defintions
 #-------
 # Constants for tile/terrain types, need to be identified in spritemap
-WATER = 1792
+WATER = 48
 SAND = 768
 GRASS = 0
 STONE = 192
-WOOD = 234
+WOOD = 683
 #^ this is all that is required for the terrain generator
 
 # Define failback colors for each tile ID
@@ -309,7 +309,8 @@ def create_terrain_map(width, height, settings, scale=10.0, octaves=6, persisten
             elif normalized_value < 0.6:
                 terrain_map[y, x] = GRASS
             else:
-                terrain_map[y, x] = STONE
+                tileChoice = random.randint(0,2)
+                terrain_map[y, x] = 192 + tileChoice
 
     # Add rivers to the terrain map
     for _ in range(num_rivers):
@@ -690,7 +691,7 @@ screen = pygame.display.set_mode((screenxDim, screenyDim),pygame.RESIZABLE)
 Window.from_display_module().maximize()
 sprite_size = (DIMENSION_X, DIMENSION_Y)
 spritemap = load_tiles(tile_file,tile_size)
-tile_selector = TileSelector(tile_file, TILE_SIZE, screen, position=(screenxDim, 0))
+tile_selector = TileSelector(tile_file, TILE_SIZE, screen, position=(screenxDim-400, 0))
 
 
 # Main loop
