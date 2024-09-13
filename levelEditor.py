@@ -28,9 +28,9 @@ DIMENSION_Y = 16
 #tile defintions
 #-------
 # Constants for tile/terrain types, need to be identified in spritemap
-WATER = 48
-SAND = 1
-GRASS = 6
+WATER = 1792
+SAND = 768
+GRASS = 0
 STONE = 192
 WOOD = 234
 #^ this is all that is required for the terrain generator
@@ -64,6 +64,92 @@ tile_size = (DIMENSION_X, DIMENSION_Y)
 tile_file = ('./Tileset.png')
 
 
+class TileSelector:
+    def __init__(self, tileset_path, tile_size, screen, position=(0, 0)):
+        self.tile_size = tile_size
+        self.screen = screen
+        self.position = position  # Position where tileset is drawn
+        self.tileset = pygame.image.load(tileset_path).convert_alpha()
+        
+        # Get tileset dimensions
+        tileset_rect = self.tileset.get_rect()
+        self.tileset_width = tileset_rect.width
+        self.tileset_height = tileset_rect.height
+
+        # Calculate the number of tiles
+        self.num_tiles_x = self.tileset_width // tile_size
+        self.num_tiles_y = self.tileset_height // tile_size
+
+        # Selected tile
+        self.selected_tile = None
+
+        # Highlight color
+        self.highlight_color = (255, 0, 0)  # Red for highlighting
+
+    def draw(self):
+        """Draw the tileset and highlight the selected tile."""
+        # Draw the tileset
+        self.screen.blit(self.tileset, self.position)
+
+        # Draw the highlight around the selected tile
+        self.draw_highlight()
+
+        # Draw the selected tile preview
+        self.draw_selected_tile()
+
+        # Draw the index of the selected tile
+        self.draw_tile_index()
+
+    def draw_highlight(self):
+        """Draw a border around the selected tile."""
+        if self.selected_tile is not None:
+            tile_x, tile_y = self.selected_tile
+            highlight_rect = pygame.Rect(
+                self.position[0] + tile_x * self.tile_size,
+                self.position[1] + tile_y * self.tile_size,
+                self.tile_size,
+                self.tile_size
+            )
+            pygame.draw.rect(self.screen, self.highlight_color, highlight_rect, 3)  # Border with thickness 3
+
+    def draw_selected_tile(self):
+        """Draw the selected tile preview on the screen."""
+        if self.selected_tile is not None:
+            tile_x, tile_y = self.selected_tile
+            tile_rect = pygame.Rect(
+                tile_x * self.tile_size,
+                tile_y * self.tile_size,
+                self.tile_size,
+                self.tile_size
+            )
+            tile_image = self.tileset.subsurface(tile_rect)
+            preview_position = (self.position[0] + self.tileset_width + 10, self.position[1] + 10)
+            self.screen.blit(tile_image, preview_position)
+
+    def draw_tile_index(self):
+        """Draw the index of the selected tile on the screen."""
+        if self.selected_tile is not None:
+            tile_x, tile_y = self.selected_tile
+            tile_index = tile_y * self.num_tiles_x + tile_x
+            font = pygame.font.Font(None, 36)
+            index_text = font.render(f"Tile Index: {tile_index}", True, (0, 0, 0))
+            preview_position = (self.position[0] + self.tileset_width + 10, self.position[1] + 10 + self.tile_size + 20)
+            self.screen.blit(index_text, preview_position)
+
+    def handle_click(self, position):
+        """Handle click events to select a tile."""
+        global cursorState  # Access the global variable
+        x, y = position
+        # Adjust position based on tileset position on the screen
+        x -= self.position[0]
+        y -= self.position[1]
+
+        if x < self.tileset_width and y < self.tileset_height:
+            tile_x = x // self.tile_size
+            tile_y = y // self.tile_size
+            if 0 <= tile_x < self.num_tiles_x and 0 <= tile_y < self.num_tiles_y:
+                self.selected_tile = (tile_x, tile_y)
+                cursorState = tile_y * self.num_tiles_x + tile_x  # Update the global variable with the tile index
 
 def prompt_for_details():
         details = {}
@@ -421,7 +507,8 @@ def render_tilemap(tilemap, tiles, bigMap, id):
                     
         
         pygame.draw.rect(screen, (128,128,128), pygame.Rect(0, screenyDim - 151, 5000, screenyDim - 149))                    
-        pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, screenyDim - 150, 5000, 5000))            
+        pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, screenyDim - 150, 5000, 5000))
+        tile_selector.draw()            
         cursor_tile = pygame.transform.scale(cursor_tile, (128,128))
         screen.blit(cursor_tile, (screenxDim - 64, screenyDim - 64))
         # Display status texts
@@ -603,6 +690,7 @@ screen = pygame.display.set_mode((screenxDim, screenyDim),pygame.RESIZABLE)
 Window.from_display_module().maximize()
 sprite_size = (DIMENSION_X, DIMENSION_Y)
 spritemap = load_tiles(tile_file,tile_size)
+tile_selector = TileSelector(tile_file, TILE_SIZE, screen, position=(screenxDim, 0))
 
 
 # Main loop
@@ -804,6 +892,8 @@ while running:
             #print(event.button)
             #mouse1
             if event.button == 1:
+                result = tile_selector.handle_click(event.pos)
+                print(result)
                 if bigMap:
                     break
                 mousePosition = pygame.mouse.get_pos()
