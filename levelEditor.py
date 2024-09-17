@@ -14,8 +14,8 @@ from tkinter import simpledialog
 from tkinter import messagebox
 
 # Define constants for world size
-COLUMNS = 5 #number of columns of tilemaps to make big map
-NUM_MAPS = 25 #total number of maps
+COLUMNS = 10 #number of columns of tilemaps to make big map
+NUM_MAPS = 100 #total number of maps
 
 #Define constants for map size
 TILEMAP_WIDTH = 40
